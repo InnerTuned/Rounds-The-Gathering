@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -17,10 +18,22 @@ namespace DeckBuilder.UI
     {
         public static DeckEditorScreen instance;
 
+        private const string AllCardsCategory = "All Cards";
+        private const int CardsPerPage = 50;
+
+        private static readonly Color PageIdleColor = new Color(0.15f, 0.15f, 0.22f);
+        private static readonly Color PageSelectedColor = Color.white;
+        private static readonly Color PageHoverColor = new Color(0.35f, 0.55f, 1f);
+        private static readonly Color PagePressedColor = new Color(0.25f, 0.45f, 0.9f);
+        private static readonly Color PageSelectedTextColor = new Color(0.1f, 0.1f, 0.15f);
+        private static readonly Color PageIdleTextColor = Color.white;
+
         // ── State ─────────────────────────────────────────────────────────────────
 
         private DeckData _deck;
         private string _currentCategory;
+        private int _currentPage;
+        private List<CardInfo> _cachedCategoryCards = new List<CardInfo>();
 
         // ── UI roots ──────────────────────────────────────────────────────────────
 
@@ -29,7 +42,9 @@ namespace DeckBuilder.UI
         private TextMeshProUGUI _deckCountText;
         private Transform _cardGridContent;
         private Transform _categoryButtonParent;
+        private Transform _pageButtonParent;
         private ScrollRect _cardScrollRect;
+        private readonly List<Button> _pageButtons = new List<Button>();
 
         // ── Modal ─────────────────────────────────────────────────────────────────
 
@@ -55,7 +70,7 @@ namespace DeckBuilder.UI
             _deck = deck;
             _canvas.gameObject.SetActive(true);
             BuildCategoryButtons();
-            ShowCategory(CardManager.categories.Count > 0 ? CardManager.categories[0] : "");
+            ShowCategory(AllCardsCategory);
         }
 
         private void OnDisable()
@@ -153,16 +168,40 @@ namespace DeckBuilder.UI
             vlg.spacing = 4;
             vlg.padding = new RectOffset(4, 4, 4, 4);
 
-            // ── Right panel: card grid ────────────────────────────────────────────
+            // ── Right panel: card grid + pagination ───────────────────────────────
 
             var rightPanel = UIHelper.CreatePanel(outer, "RightPanel",
                 new Vector2(0.19f, 0f), new Vector2(1f, 0.92f),
-                bg: new Color(0.05f, 0.05f, 0.08f, 1f)); // Dark background so we can see where it is
+                bg: new Color(0.05f, 0.05f, 0.08f, 1f));
+
+            var pageBar = UIHelper.CreatePanel(rightPanel, "PageBar",
+                new Vector2(0f, 0f), new Vector2(1f, 0.07f),
+                bg: new Color(0.08f, 0.08f, 0.12f, 0.95f));
+
+            // Simple panel with HorizontalLayoutGroup (no ScrollRect - avoids raycast issues)
+            var pageContentGo = new GameObject("PageContent");
+            pageContentGo.transform.SetParent(pageBar.transform, false);
+            var pageContentRt = pageContentGo.AddComponent<RectTransform>();
+            pageContentRt.anchorMin = Vector2.zero;
+            pageContentRt.anchorMax = Vector2.one;
+            pageContentRt.pivot = new Vector2(0f, 0.5f);
+            pageContentRt.offsetMin = new Vector2(8f, 4f);
+            pageContentRt.offsetMax = new Vector2(-8f, -4f);
+            _pageButtonParent = pageContentRt;
+
+            var pageHlg = pageContentGo.AddComponent<HorizontalLayoutGroup>();
+            pageHlg.childControlWidth = true;
+            pageHlg.childControlHeight = true;
+            pageHlg.childForceExpandWidth = false;
+            pageHlg.childForceExpandHeight = true;
+            pageHlg.spacing = 6;
+            pageHlg.padding = new RectOffset(4, 4, 0, 0);
+            pageHlg.childAlignment = TextAnchor.MiddleLeft;
 
             var cardScrollGo = BuildScrollRect(rightPanel, "CardScroll",
                 out _cardGridContent);
             var cardSrRt = cardScrollGo.GetComponent<RectTransform>();
-            cardSrRt.anchorMin = Vector2.zero;
+            cardSrRt.anchorMin = new Vector2(0f, 0.07f);
             cardSrRt.anchorMax = Vector2.one;
             cardSrRt.offsetMin = cardSrRt.offsetMax = Vector2.zero;
 
@@ -189,9 +228,8 @@ namespace DeckBuilder.UI
         // ── Scroll rect builder ───────────────────────────────────────────────────
 
         private static GameObject BuildScrollRect(Transform parent, string name,
-            out Transform content)
+            out Transform content, bool horizontal = false)
         {
-            // Scroll rect container
             var srGo = new GameObject(name);
             srGo.transform.SetParent(parent, false);
             var srRt = srGo.AddComponent<RectTransform>();
@@ -200,39 +238,53 @@ namespace DeckBuilder.UI
             srRt.offsetMin = srRt.offsetMax = Vector2.zero;
 
             var sr = srGo.AddComponent<ScrollRect>();
-            sr.horizontal = false;
-            sr.vertical = true;
+            sr.horizontal = horizontal;
+            sr.vertical = !horizontal;
             sr.movementType = ScrollRect.MovementType.Clamped;
-            sr.scrollSensitivity = 80f; // Faster scrolling for better UX
+            sr.scrollSensitivity = 80f;
 
-            // Viewport with mask
             var vpGo = new GameObject("Viewport");
             vpGo.transform.SetParent(srGo.transform, false);
             var vpRt = vpGo.AddComponent<RectTransform>();
             vpRt.anchorMin = Vector2.zero;
             vpRt.anchorMax = Vector2.one;
             vpRt.offsetMin = vpRt.offsetMax = Vector2.zero;
-            vpRt.pivot = new Vector2(0, 1);
-            // Use Image + Mask instead of RectMask2D for better compatibility
+            vpRt.pivot = horizontal ? new Vector2(0f, 0.5f) : new Vector2(0f, 1f);
             var vpImg = vpGo.AddComponent<Image>();
-            vpImg.color = new Color(1, 1, 1, 0.01f); // Nearly invisible but needed for Mask
+            vpImg.color = new Color(1, 1, 1, 0.01f);
             var vpMask = vpGo.AddComponent<Mask>();
             vpMask.showMaskGraphic = false;
             sr.viewport = vpRt;
 
-            // Content that grows vertically
             var contentGo = new GameObject("Content");
             contentGo.transform.SetParent(vpGo.transform, false);
             var contentRt = contentGo.AddComponent<RectTransform>();
-            contentRt.anchorMin = new Vector2(0, 1);
-            contentRt.anchorMax = new Vector2(1, 1);
-            contentRt.pivot = new Vector2(0, 1);
-            contentRt.sizeDelta = new Vector2(0, 0);
+            if (horizontal)
+            {
+                contentRt.anchorMin = new Vector2(0f, 0f);
+                contentRt.anchorMax = new Vector2(0f, 1f);
+                contentRt.pivot = new Vector2(0f, 0.5f);
+            }
+            else
+            {
+                contentRt.anchorMin = new Vector2(0f, 1f);
+                contentRt.anchorMax = new Vector2(1f, 1f);
+                contentRt.pivot = new Vector2(0f, 1f);
+            }
+            contentRt.sizeDelta = Vector2.zero;
             contentRt.anchoredPosition = Vector2.zero;
 
             var csf = contentGo.AddComponent<ContentSizeFitter>();
-            csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            if (horizontal)
+            {
+                csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                csf.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+            }
+            else
+            {
+                csf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+                csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
 
             sr.content = contentRt;
             content = contentRt;
@@ -253,20 +305,30 @@ namespace DeckBuilder.UI
                 RTGLog.Warn("No categories found in CardManager!");
             }
 
+            int buttonCount = 0;
+            AddCategoryButton(AllCardsCategory, ref buttonCount);
+
             foreach (string cat in CardManager.categories)
             {
-                RTGLog.Line($"  Adding category button: '{cat}'");
-                string captured = cat;
-                var btn = UIHelper.CreateButton(_categoryButtonParent, $"Cat_{cat}", cat,
-                    Vector2.zero, new Vector2(0, 44), fontSize: 18,
-                    bgColor: new Color(0.15f, 0.15f, 0.22f));
-                var rt = btn.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0f, 0f);
-                rt.anchorMax = new Vector2(1f, 0f);
-                rt.sizeDelta = new Vector2(0, 44);
-                btn.onClick.AddListener(() => ShowCategory(captured));
+                AddCategoryButton(cat, ref buttonCount);
             }
-            RTGLog.Line($"Built {CardManager.categories.Count} category button(s).");
+
+            RTGLog.Line($"Built {buttonCount} category button(s) (including '{AllCardsCategory}').");
+        }
+
+        private void AddCategoryButton(string cat, ref int buttonCount)
+        {
+            RTGLog.Line($"  Adding category button: '{cat}'");
+            string captured = cat;
+            var btn = UIHelper.CreateButton(_categoryButtonParent, $"Cat_{cat}", cat,
+                Vector2.zero, new Vector2(0, 44), fontSize: 18,
+                bgColor: new Color(0.15f, 0.15f, 0.22f));
+            var rt = btn.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.sizeDelta = new Vector2(0, 44);
+            btn.onClick.AddListener(() => ShowCategory(captured));
+            buttonCount++;
         }
 
         // ── Card grid ─────────────────────────────────────────────────────────────
@@ -275,88 +337,244 @@ namespace DeckBuilder.UI
         {
             RTGLog.Section($"DeckEditorScreen — ShowCategory '{category}'");
             _currentCategory = category;
-            _viewingText.text = $"Viewing: {category}";
+            _currentPage = 0;
+            _cachedCategoryCards = GetCardsForCategory(category);
+            RTGLog.Line($"Resolved {_cachedCategoryCards.Count} card(s) for category '{category}'.");
 
-            // Use DestroyImmediate so the GridLayoutGroup sees an empty parent
-            // before new cards are added — Destroy is deferred and causes cards
-            // from the previous category to still count toward layout positions.
-            foreach (var row in _cardRows)
-                if (row != null) DestroyImmediate(row);
-            _cardRows.Clear();
+            RebuildPageButtons();
+            ShowPage(0);
+        }
 
-            string[] cardNames = CardManager.GetCardsInCategory(category);
-            RTGLog.Line($"GetCardsInCategory returned {cardNames?.Length ?? 0} card name(s).");
+        private void ShowPage(int page)
+        {
+            int pageCount = GetPageCount();
+            _currentPage = Mathf.Clamp(page, 0, Mathf.Max(0, pageCount - 1));
+            UpdateViewingText();
 
-            if (cardNames == null || cardNames.Length == 0)
+            ClearCardRows();
+
+            if (_cachedCategoryCards.Count == 0)
             {
-                RTGLog.Warn($"No cards found for category '{category}'.");
+                RTGLog.Warn($"No cards found for category '{_currentCategory}'.");
+                UpdatePageButtonStyles();
                 UpdateDeckCountDisplay();
                 return;
             }
 
-            // Get CardInfo for all cards and sort by rarity (Common → Uncommon → Rare → ...)
-            var cardsWithInfo = new List<CardInfo>();
+            int start = _currentPage * CardsPerPage;
+            int end = Mathf.Min(start + CardsPerPage, _cachedCategoryCards.Count);
+            int built = 0;
+
+            for (int i = start; i < end; i++)
+            {
+                CardInfo ci = _cachedCategoryCards[i];
+                if (ci == null)
+                    continue;
+                BuildCardRow(ci);
+                built++;
+            }
+
+            RTGLog.Line(
+                $"Built {built} card row(s) for '{_currentCategory}' page {_currentPage + 1}/{pageCount}.");
+
+            if (_cardScrollRect != null)
+                _cardScrollRect.verticalNormalizedPosition = 1f;
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_cardGridContent as RectTransform);
+
+            UpdatePageButtonStyles();
+            UpdateDeckCountDisplay();
+        }
+
+        private void ClearCardRows()
+        {
+            foreach (var row in _cardRows)
+                if (row != null)
+                    DestroyImmediate(row);
+            _cardRows.Clear();
+        }
+
+        private int GetPageCount() =>
+            _cachedCategoryCards.Count == 0
+                ? 1
+                : Mathf.CeilToInt(_cachedCategoryCards.Count / (float)CardsPerPage);
+
+        private void UpdateViewingText()
+        {
+            int pageCount = GetPageCount();
+            _viewingText.text = pageCount <= 1
+                ? $"Viewing: {_currentCategory}"
+                : $"Viewing: {_currentCategory} (Page {_currentPage + 1}/{pageCount})";
+        }
+
+        private void RebuildPageButtons()
+        {
+            foreach (Transform child in _pageButtonParent)
+                Destroy(child.gameObject);
+            _pageButtons.Clear();
+
+            int pageCount = GetPageCount();
+            for (int page = 0; page < pageCount; page++)
+            {
+                int capturedPage = page;
+                string label = (page + 1).ToString();
+                var btn = CreatePageButton(_pageButtonParent, label, capturedPage);
+                _pageButtons.Add(btn);
+            }
+
+            // Force layout rebuild so raycast hit areas match visual positions
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_pageButtonParent as RectTransform);
+        }
+
+        private Button CreatePageButton(Transform parent, string label, int pageIndex)
+        {
+            var go = new GameObject($"Page_{label}");
+            go.transform.SetParent(parent, false);
+
+            var rt = go.AddComponent<RectTransform>();
+            // Anchor to left edge, stretch vertically - let layout group position horizontally
+            rt.anchorMin = new Vector2(0f, 0f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 0.5f);
+            rt.sizeDelta = new Vector2(40f, 0f);
+
+            var img = go.AddComponent<Image>();
+            img.color = PageIdleColor;
+            img.raycastTarget = true;
+
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(() => ShowPage(pageIndex));
+
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredWidth = 40f;
+            le.minWidth = 40f;
+            le.flexibleWidth = 0f;
+
+            // Label
+            var labelGo = new GameObject("Label");
+            labelGo.transform.SetParent(go.transform, false);
+            var labelRt = labelGo.AddComponent<RectTransform>();
+            labelRt.anchorMin = Vector2.zero;
+            labelRt.anchorMax = Vector2.one;
+            labelRt.offsetMin = Vector2.zero;
+            labelRt.offsetMax = Vector2.zero;
+
+            var tmp = labelGo.AddComponent<TextMeshProUGUI>();
+            tmp.text = label;
+            tmp.fontSize = 18;
+            tmp.alignment = TextAlignmentOptions.Center;
+            tmp.color = Color.white;
+            tmp.raycastTarget = false;
+
+            return btn;
+        }
+
+        private void UpdatePageButtonStyles()
+        {
+            for (int i = 0; i < _pageButtons.Count; i++)
+            {
+                Button btn = _pageButtons[i];
+                if (btn == null)
+                    continue;
+
+                bool selected = i == _currentPage;
+                ApplyPageButtonStyle(btn, selected);
+            }
+        }
+
+        private static void ApplyPageButtonStyle(Button btn, bool selected)
+        {
+            var img = btn.GetComponent<Image>();
+            if (img == null)
+                return;
+
+            Color normal = selected ? PageSelectedColor : PageIdleColor;
+            Color highlighted = selected ? PageSelectedColor : PageHoverColor;
+            Color pressed = selected ? new Color(0.9f, 0.9f, 0.9f) : PagePressedColor;
+
+            img.color = normal;
+            btn.colors = new ColorBlock
+            {
+                normalColor = normal,
+                highlightedColor = highlighted,
+                pressedColor = pressed,
+                disabledColor = new Color(0.3f, 0.3f, 0.3f, 0.5f),
+                colorMultiplier = 1f,
+                fadeDuration = 0.08f
+            };
+
+            var label = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null)
+                label.color = selected ? PageSelectedTextColor : PageIdleTextColor;
+        }
+
+        private static List<CardInfo> GetCardsForCategory(string category)
+        {
+            if (category == AllCardsCategory)
+                return GetAllCardsAlphabetical();
+
+            string[] cardNames = CardManager.GetCardsInCategory(category);
+            if (cardNames == null || cardNames.Length == 0)
+                return new List<CardInfo>();
+
+            var cardsWithInfo = new List<CardInfo>(cardNames.Length);
             foreach (string cardName in cardNames)
             {
                 CardInfo ci = CardManager.GetCardInfoWithName(cardName);
                 if (ci != null)
                     cardsWithInfo.Add(ci);
             }
-            cardsWithInfo.Sort((a, b) => a.rarity.CompareTo(b.rarity));
-            RTGLog.Line($"Sorted {cardsWithInfo.Count} cards by rarity.");
 
-            int built = 0;
-            int skipped = 0;
-            foreach (CardInfo ci in cardsWithInfo)
+            SortCardsAlphabeticalThenRarity(cardsWithInfo);
+            return cardsWithInfo;
+        }
+
+        private static List<CardInfo> GetAllCardsAlphabetical()
+        {
+            var cardsWithInfo = new List<CardInfo>(CardManager.cards.Count);
+            foreach (string cardName in CardManager.cards.Keys)
             {
-                if (ci == null)
-                {
-                    skipped++;
-                    continue;
-                }
-                BuildCardRow(ci);
-                built++;
+                CardInfo ci = CardManager.GetCardInfoWithName(cardName);
+                if (ci != null)
+                    cardsWithInfo.Add(ci);
             }
 
-            RTGLog.Line($"Built {built} card row(s), skipped {skipped}. Deck total={_deck?.TotalCount ?? 0}.");
+            SortCardsAlphabeticalThenRarity(cardsWithInfo);
+            return cardsWithInfo;
+        }
 
-            // Force layout rebuild
-            Canvas.ForceUpdateCanvases();
-            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(_cardGridContent as RectTransform);
+        /// <summary>Letter groups A→Z; within each letter, least rare first; ties broken by full name.</summary>
+        private static void SortCardsAlphabeticalThenRarity(List<CardInfo> cards)
+        {
+            cards.Sort((a, b) =>
+            {
+                int letterCmp = CompareFirstLetter(a?.cardName, b?.cardName);
+                if (letterCmp != 0)
+                    return letterCmp;
 
-            // Log diagnostic info about scroll rect and cards
-            RTGLog.Line($"=== Card Layout Diagnostics ===");
-            RTGLog.Line($"CardGridContent: childCount={_cardGridContent.childCount}");
-            
-            if (_cardScrollRect != null)
-            {
-                var srRt = _cardScrollRect.GetComponent<RectTransform>();
-                RTGLog.Line($"ScrollRect: rect={srRt.rect}, active={_cardScrollRect.gameObject.activeInHierarchy}");
-                if (_cardScrollRect.viewport != null)
-                {
-                    RTGLog.Line($"Viewport: rect={_cardScrollRect.viewport.rect}");
-                }
-                if (_cardScrollRect.content != null)
-                {
-                    RTGLog.Line($"Content: rect={_cardScrollRect.content.rect}, sizeDelta={_cardScrollRect.content.sizeDelta}");
-                }
-            }
-            
-            if (_cardRows.Count > 0)
-            {
-                for (int i = 0; i < Mathf.Min(3, _cardRows.Count); i++)
-                {
-                    var cardRt = _cardRows[i].GetComponent<RectTransform>();
-                    var cardImg = _cardRows[i].GetComponent<Image>();
-                    RTGLog.Line($"Card[{i}] '{_cardRows[i].name}': localPos={cardRt.localPosition}, anchoredPos={cardRt.anchoredPosition}, sizeDelta={cardRt.sizeDelta}, rect={cardRt.rect}, imgColor={cardImg?.color}, active={_cardRows[i].activeInHierarchy}");
-                }
-            }
-            else
-            {
-                RTGLog.Warn("No card rows created!");
-            }
+                int rarityCmp = a.rarity.CompareTo(b.rarity);
+                if (rarityCmp != 0)
+                    return rarityCmp;
 
-            UpdateDeckCountDisplay();
+                return string.Compare(a.cardName, b.cardName, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        private static int CompareFirstLetter(string a, string b)
+        {
+            char letterA = GetSortLetter(a);
+            char letterB = GetSortLetter(b);
+            return letterA.CompareTo(letterB);
+        }
+
+        private static char GetSortLetter(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return '\0';
+            return char.ToUpperInvariant(name[0]);
         }
 
         private void BuildCardRow(CardInfo cardInfo)
