@@ -73,7 +73,7 @@ Pick Copycat from the draft table to duplicate another card instead of taking a 
 
 - **Source:** any filled slot on **any player's** card bar
 - **Confirm:** clones the chosen card onto your build; Copycat is consumed from your runtime deck and is **not** added to your hand; your pick turn ends
-- **Cancel:** Copycat is still consumed; a fresh draft hand is dealt so you can pick normally
+- **Cancel:** closes the selector and returns you to the same draft hand; Copycat is **not** consumed
 
 ### Swap (Uncommon)
 
@@ -81,7 +81,7 @@ Pick Swap from the draft table to delete a card from your hand and draw a replac
 
 - **Source:** your own card bar only
 - **Confirm:** deletes the chosen card (networked — full stat reset and reapply survivors), consumes Swap from your deck, then deals a **new draft hand**
-- **Cancel:** Swap is still consumed; a fresh draft hand is dealt
+- **Cancel:** closes the selector and returns you to the same draft hand; Swap is **not** consumed
 
 Swap replaces the old always-on card-bar delete buttons during picks. Hand deletion is now a card you deliberately put in your deck.
 

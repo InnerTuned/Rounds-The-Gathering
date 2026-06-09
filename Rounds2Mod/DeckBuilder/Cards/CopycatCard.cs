@@ -15,7 +15,7 @@ namespace DeckBuilder.Cards
         protected override string GetTitle() => CardDisplayName;
 
         protected override string GetDescription() =>
-            "Duplicate any card in your hand. Copycat is consumed; your deck pick is skipped.";
+            "Duplicate any card from any player's hand. Copycat is consumed on confirm; your deck pick is skipped.";
 
         protected override CardInfoStat[] GetStats() => System.Array.Empty<CardInfoStat>();
 

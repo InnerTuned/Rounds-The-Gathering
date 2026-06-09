@@ -159,6 +159,8 @@ namespace DeckBuilder.Cards
             _deltaPreviewText.text = "";
             RefreshSelectButton();
             AttachSlotButtons(pickerID, mode);
+            if (_slotButtons.Count == 0)
+                _deltaPreviewText.text = "<i>No cards available — press Cancel to return to the draft.</i>";
             _canvas.gameObject.SetActive(true);
 
             LogSection("Selector UI shown");

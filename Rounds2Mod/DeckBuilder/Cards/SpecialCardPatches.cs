@@ -47,6 +47,8 @@ namespace DeckBuilder.Cards
             AccessTools.Field(typeof(CardChoice), "isPlaying");
         private static readonly FieldInfo s_picksField =
             AccessTools.Field(typeof(CardChoice), "picks");
+        private static readonly FieldInfo s_spawnedField =
+            AccessTools.Field(typeof(CardChoice), "spawned");
         private static readonly MethodInfo s_rpca_assignCard =
             AccessTools.Method(typeof(ModdingUtils.Utils.Cards), "RPCA_AssignCard",
                 new[] { typeof(string), typeof(int), typeof(bool), typeof(string), typeof(float), typeof(float), typeof(bool) });
@@ -151,14 +153,7 @@ namespace DeckBuilder.Cards
             }
 
             if (!hasSelectableCards)
-            {
-                LogWarn(isCopycat, "No selectable cards — auto-cancel and redraw.");
-                IsSpecialFlowActive = true;
-                ConsumeSpecialCard();
-                IsSpecialFlowActive = false;
-                RedrawHand();
-                return;
-            }
+                LogWarn(isCopycat, "No selectable cards — showing selector UI; [Select] stays disabled until Cancel.");
 
             IsSpecialFlowActive = true;
             string msg = isCopycat ? "Select any card to duplicate" : "Select any card to delete";
@@ -186,8 +181,71 @@ namespace DeckBuilder.Cards
         {
             LogSection(_isCopycatMode, "Cancel");
             IsSpecialFlowActive = false;
-            ConsumeSpecialCard();
-            RedrawHand();
+
+            CardChoice cc = CardChoice.instance;
+            if (cc == null)
+            {
+                LogWarn(_isCopycatMode, "CardChoice.instance is null — cannot restore state.");
+                return;
+            }
+
+            // Stop the IDoEndPick coroutine that started when the card was clicked.
+            // This prevents NullReferenceExceptions and ensures clean state.
+            cc.StopAllCoroutines();
+            LogLine(_isCopycatMode, "Stopped CardChoice coroutines.");
+
+            // Restore pickrID so the player can select cards again.
+            // When the card was clicked, pickrID was set to -1 which disables DoPlayerSelect().
+            cc.pickrID = _pickerID;
+            LogLine(_isCopycatMode, $"Restored CardChoice.pickrID = {_pickerID}");
+
+            // Reset the isPlaying field so picks can proceed.
+            if (s_isPlayingField != null)
+            {
+                s_isPlayingField.SetValue(cc, false);
+                LogLine(_isCopycatMode, "Reset CardChoice.isPlaying = false");
+            }
+
+            // Ensure IsPicking is true so Update() processes clicks.
+            cc.IsPicking = true;
+            LogLine(_isCopycatMode, "Ensured CardChoice.IsPicking = true");
+
+            // Reset the "done" flag on the special card so it can be picked again.
+            // ApplyCardStats.Pick() sets done=true before calling ApplyStats().
+            if (_specialCard != null)
+            {
+                var applyStats = _specialCard.GetComponentInChildren<ApplyCardStats>();
+                if (applyStats != null)
+                {
+                    var doneField = AccessTools.Field(typeof(ApplyCardStats), "done");
+                    doneField?.SetValue(applyStats, false);
+                    LogLine(_isCopycatMode, "Reset ApplyCardStats.done on the special card.");
+                }
+            }
+
+            // Reset "done" on ALL spawned draft cards to ensure they're pickable.
+            var spawned = s_spawnedField?.GetValue(cc) as System.Collections.IList;
+            if (spawned != null)
+            {
+                int resetCount = 0;
+                foreach (var obj in spawned)
+                {
+                    var go = obj as GameObject;
+                    if (go == null) continue;
+                    var stats = go.GetComponentInChildren<ApplyCardStats>();
+                    if (stats == null) continue;
+                    var doneField = AccessTools.Field(typeof(ApplyCardStats), "done");
+                    if (doneField != null && (bool)doneField.GetValue(stats))
+                    {
+                        doneField.SetValue(stats, false);
+                        resetCount++;
+                    }
+                }
+                if (resetCount > 0)
+                    LogLine(_isCopycatMode, $"Reset ApplyCardStats.done on {resetCount} spawned card(s).");
+            }
+
+            LogLine(_isCopycatMode, "Selector closed — resuming current draft hand (no consume, no redraw).");
         }
 
         // ── Copycat confirm: clone selected card, end pick phase ──────────────────

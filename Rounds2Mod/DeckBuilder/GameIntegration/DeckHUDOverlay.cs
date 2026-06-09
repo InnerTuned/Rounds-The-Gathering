@@ -144,9 +144,31 @@ namespace DeckBuilder.GameIntegration
 
         private void Update()
         {
-            // Keep display in sync every frame during pick phase (covers local-only play)
-            if (_currentPickerID >= 0 && _canvas != null && _canvas.gameObject.activeSelf)
-                RefreshDisplay(_currentPickerID);
+            // Hide HUD when game is no longer active (e.g., returned to main menu).
+            if (_canvas != null && _canvas.gameObject.activeSelf)
+            {
+                if (!IsGameActive())
+                {
+                    RTGLog.Line("DeckHUDOverlay — game no longer active, hiding HUD.");
+                    _currentPickerID = -1;
+                    SetVisible(false);
+                    return;
+                }
+
+                // Keep display in sync every frame during pick phase (covers local-only play)
+                if (_currentPickerID >= 0)
+                    RefreshDisplay(_currentPickerID);
+            }
+        }
+
+        private static bool IsGameActive()
+        {
+            if (GameManager.instance == null) return false;
+            if (!GameManager.instance.isPlaying) return false;
+            if (PlayerManager.instance == null) return false;
+            if (PlayerManager.instance.players == null || PlayerManager.instance.players.Count == 0)
+                return false;
+            return true;
         }
     }
 }

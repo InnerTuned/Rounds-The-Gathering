@@ -97,7 +97,24 @@ public class CardDeltaPreviewOverlay : MonoBehaviour
         if (!_pickSequenceActive || _canvas == null || !_canvas.gameObject.activeSelf)
             return;
 
+        // Hide when game is no longer active (e.g., returned to main menu).
+        if (!IsGameActive())
+        {
+            OnPickSequenceEnded();
+            return;
+        }
+
         Refresh();
+    }
+
+    private static bool IsGameActive()
+    {
+        if (GameManager.instance == null) return false;
+        if (!GameManager.instance.isPlaying) return false;
+        if (PlayerManager.instance == null) return false;
+        if (PlayerManager.instance.players == null || PlayerManager.instance.players.Count == 0)
+            return false;
+        return true;
     }
 
     private void Refresh()

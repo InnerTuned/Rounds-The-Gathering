@@ -124,4 +124,24 @@ public class PickStatsController : MonoBehaviour
         EndPickPhase("HookPickEnd");
         yield break;
     }
+
+    private void Update()
+    {
+        // Hide UI when game is no longer active (e.g., returned to main menu).
+        if (_canvas != null && _canvas.gameObject.activeSelf && !IsGameActive())
+        {
+            IOLog.Line("PickStatsController — game no longer active, hiding UI.");
+            EndPickPhase("GameEnded");
+        }
+    }
+
+    private static bool IsGameActive()
+    {
+        if (GameManager.instance == null) return false;
+        if (!GameManager.instance.isPlaying) return false;
+        if (PlayerManager.instance == null) return false;
+        if (PlayerManager.instance.players == null || PlayerManager.instance.players.Count == 0)
+            return false;
+        return true;
+    }
 }
