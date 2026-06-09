@@ -37,6 +37,7 @@ public class Plugin : BaseUnityPlugin
         uiRoot.AddComponent<DeckSelectorScreen>();
         uiRoot.AddComponent<CreateDeckScreen>();
         uiRoot.AddComponent<DeckEditorScreen>();
+        uiRoot.AddComponent<DeckBuilderUiInputLock>();
 
         RTGLog.Line($"Plugin {MyPluginInfo.PLUGIN_GUID} loaded.");
     }

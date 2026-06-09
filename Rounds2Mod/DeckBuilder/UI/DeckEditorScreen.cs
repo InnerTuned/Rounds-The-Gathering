@@ -18,6 +18,9 @@ namespace DeckBuilder.UI
     {
         public static DeckEditorScreen instance;
 
+        public bool IsOpen => _canvas != null && _canvas.gameObject.activeInHierarchy;
+
+        private const string MyDeckCategory = "My Deck";
         private const string AllCardsCategory = "All Cards";
         private const int CardsPerPage = 50;
 
@@ -38,12 +41,14 @@ namespace DeckBuilder.UI
         // ── UI roots ──────────────────────────────────────────────────────────────
 
         private Canvas _canvas;
-        private TextMeshProUGUI _viewingText;
+        private TMP_InputField _searchField;
         private TextMeshProUGUI _deckCountText;
         private Transform _cardGridContent;
         private Transform _categoryButtonParent;
         private Transform _pageButtonParent;
         private ScrollRect _cardScrollRect;
+        private readonly List<Button> _categoryButtons = new List<Button>();
+        private readonly List<string> _categoryButtonNames = new List<string>();
         private readonly List<Button> _pageButtons = new List<Button>();
 
         // ── Modal ─────────────────────────────────────────────────────────────────
@@ -114,12 +119,12 @@ namespace DeckBuilder.UI
                 new Vector2(0f, 0.92f), Vector2.one,
                 bg: new Color(0.1f, 0.1f, 0.15f, 0.95f));
 
-            _viewingText = UIHelper.CreateText(topBar, "ViewingText", "Viewing: —",
-                fontSize: 22, alignment: TextAlignmentOptions.MidlineLeft);
-            var vtRt = _viewingText.GetComponent<RectTransform>();
-            vtRt.anchorMin = new Vector2(0.01f, 0f);
-            vtRt.anchorMax = new Vector2(0.35f, 1f);
-            vtRt.offsetMin = vtRt.offsetMax = Vector2.zero;
+            _searchField = UIHelper.CreateInputField(topBar, "SearchField", "Search cards...",
+                Vector2.zero, Vector2.zero, fontSize: 20);
+            var searchRt = _searchField.GetComponent<RectTransform>();
+            searchRt.anchorMin = new Vector2(0.01f, 0.15f);
+            searchRt.anchorMax = new Vector2(0.35f, 0.85f);
+            searchRt.offsetMin = searchRt.offsetMax = Vector2.zero;
 
             _deckCountText = UIHelper.CreateText(topBar, "DeckCountText", "Cards in Deck: 0",
                 fontSize: 22, alignment: TextAlignmentOptions.MidlineLeft);
@@ -298,6 +303,8 @@ namespace DeckBuilder.UI
             RTGLog.Section("DeckEditorScreen — BuildCategoryButtons");
             foreach (Transform child in _categoryButtonParent)
                 Destroy(child.gameObject);
+            _categoryButtons.Clear();
+            _categoryButtonNames.Clear();
 
             RTGLog.Line($"CardManager.categories.Count = {CardManager.categories.Count}");
             if (CardManager.categories.Count == 0)
@@ -305,30 +312,25 @@ namespace DeckBuilder.UI
                 RTGLog.Warn("No categories found in CardManager!");
             }
 
-            int buttonCount = 0;
-            AddCategoryButton(AllCardsCategory, ref buttonCount);
+            AddCategoryButton(MyDeckCategory);
+            AddCategoryButton(AllCardsCategory);
 
             foreach (string cat in CardManager.categories)
-            {
-                AddCategoryButton(cat, ref buttonCount);
-            }
+                AddCategoryButton(cat);
 
-            RTGLog.Line($"Built {buttonCount} category button(s) (including '{AllCardsCategory}').");
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_categoryButtonParent as RectTransform);
+
+            RTGLog.Line($"Built {_categoryButtons.Count} category button(s).");
         }
 
-        private void AddCategoryButton(string cat, ref int buttonCount)
+        private void AddCategoryButton(string cat)
         {
             RTGLog.Line($"  Adding category button: '{cat}'");
             string captured = cat;
-            var btn = UIHelper.CreateButton(_categoryButtonParent, $"Cat_{cat}", cat,
-                Vector2.zero, new Vector2(0, 44), fontSize: 18,
-                bgColor: new Color(0.15f, 0.15f, 0.22f));
-            var rt = btn.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 0f);
-            rt.anchorMax = new Vector2(1f, 0f);
-            rt.sizeDelta = new Vector2(0, 44);
-            btn.onClick.AddListener(() => ShowCategory(captured));
-            buttonCount++;
+            var btn = CreateCategoryButton(_categoryButtonParent, cat, () => ShowCategory(captured));
+            _categoryButtons.Add(btn);
+            _categoryButtonNames.Add(cat);
         }
 
         // ── Card grid ─────────────────────────────────────────────────────────────
@@ -341,6 +343,7 @@ namespace DeckBuilder.UI
             _cachedCategoryCards = GetCardsForCategory(category);
             RTGLog.Line($"Resolved {_cachedCategoryCards.Count} card(s) for category '{category}'.");
 
+            UpdateCategoryButtonStyles();
             RebuildPageButtons();
             ShowPage(0);
         }
@@ -349,7 +352,6 @@ namespace DeckBuilder.UI
         {
             int pageCount = GetPageCount();
             _currentPage = Mathf.Clamp(page, 0, Mathf.Max(0, pageCount - 1));
-            UpdateViewingText();
 
             ClearCardRows();
 
@@ -400,14 +402,6 @@ namespace DeckBuilder.UI
                 ? 1
                 : Mathf.CeilToInt(_cachedCategoryCards.Count / (float)CardsPerPage);
 
-        private void UpdateViewingText()
-        {
-            int pageCount = GetPageCount();
-            _viewingText.text = pageCount <= 1
-                ? $"Viewing: {_currentCategory}"
-                : $"Viewing: {_currentCategory} (Page {_currentPage + 1}/{pageCount})";
-        }
-
         private void RebuildPageButtons()
         {
             foreach (Transform child in _pageButtonParent)
@@ -428,13 +422,40 @@ namespace DeckBuilder.UI
             LayoutRebuilder.ForceRebuildLayoutImmediate(_pageButtonParent as RectTransform);
         }
 
+        private Button CreateCategoryButton(Transform parent, string label, Action onClick)
+        {
+            var go = new GameObject($"Cat_{label}");
+            go.transform.SetParent(parent, false);
+
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(0f, 44f);
+
+            var img = go.AddComponent<Image>();
+            img.color = PageIdleColor;
+            img.raycastTarget = true;
+
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(() => onClick());
+
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredHeight = 44f;
+            le.minHeight = 44f;
+            le.flexibleHeight = 0f;
+
+            AddNavButtonLabel(go.transform, label, 18, TextAlignmentOptions.Center);
+            return btn;
+        }
+
         private Button CreatePageButton(Transform parent, string label, int pageIndex)
         {
             var go = new GameObject($"Page_{label}");
             go.transform.SetParent(parent, false);
 
             var rt = go.AddComponent<RectTransform>();
-            // Anchor to left edge, stretch vertically - let layout group position horizontally
             rt.anchorMin = new Vector2(0f, 0f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 0.5f);
@@ -453,9 +474,15 @@ namespace DeckBuilder.UI
             le.minWidth = 40f;
             le.flexibleWidth = 0f;
 
-            // Label
+            AddNavButtonLabel(go.transform, label, 18, TextAlignmentOptions.Center);
+            return btn;
+        }
+
+        private static void AddNavButtonLabel(Transform parent, string text, int fontSize,
+            TextAlignmentOptions alignment)
+        {
             var labelGo = new GameObject("Label");
-            labelGo.transform.SetParent(go.transform, false);
+            labelGo.transform.SetParent(parent, false);
             var labelRt = labelGo.AddComponent<RectTransform>();
             labelRt.anchorMin = Vector2.zero;
             labelRt.anchorMax = Vector2.one;
@@ -463,13 +490,25 @@ namespace DeckBuilder.UI
             labelRt.offsetMax = Vector2.zero;
 
             var tmp = labelGo.AddComponent<TextMeshProUGUI>();
-            tmp.text = label;
-            tmp.fontSize = 18;
-            tmp.alignment = TextAlignmentOptions.Center;
-            tmp.color = Color.white;
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.alignment = alignment;
+            tmp.color = PageIdleTextColor;
             tmp.raycastTarget = false;
+        }
 
-            return btn;
+        private void UpdateCategoryButtonStyles()
+        {
+            for (int i = 0; i < _categoryButtons.Count; i++)
+            {
+                Button btn = _categoryButtons[i];
+                if (btn == null)
+                    continue;
+
+                bool selected = i < _categoryButtonNames.Count
+                    && _categoryButtonNames[i] == _currentCategory;
+                ApplyNavButtonStyle(btn, selected);
+            }
         }
 
         private void UpdatePageButtonStyles()
@@ -481,11 +520,11 @@ namespace DeckBuilder.UI
                     continue;
 
                 bool selected = i == _currentPage;
-                ApplyPageButtonStyle(btn, selected);
+                ApplyNavButtonStyle(btn, selected);
             }
         }
 
-        private static void ApplyPageButtonStyle(Button btn, bool selected)
+        private static void ApplyNavButtonStyle(Button btn, bool selected)
         {
             var img = btn.GetComponent<Image>();
             if (img == null)
@@ -511,8 +550,11 @@ namespace DeckBuilder.UI
                 label.color = selected ? PageSelectedTextColor : PageIdleTextColor;
         }
 
-        private static List<CardInfo> GetCardsForCategory(string category)
+        private List<CardInfo> GetCardsForCategory(string category)
         {
+            if (category == MyDeckCategory)
+                return GetMyDeckCards();
+
             if (category == AllCardsCategory)
                 return GetAllCardsAlphabetical();
 
@@ -532,7 +574,7 @@ namespace DeckBuilder.UI
             return cardsWithInfo;
         }
 
-        private static List<CardInfo> GetAllCardsAlphabetical()
+        private List<CardInfo> GetAllCardsAlphabetical()
         {
             var cardsWithInfo = new List<CardInfo>(CardManager.cards.Count);
             foreach (string cardName in CardManager.cards.Keys)
@@ -544,6 +586,40 @@ namespace DeckBuilder.UI
 
             SortCardsAlphabeticalThenRarity(cardsWithInfo);
             return cardsWithInfo;
+        }
+
+        private List<CardInfo> GetMyDeckCards()
+        {
+            var cardsWithInfo = new List<CardInfo>();
+            if (_deck?.cards == null)
+                return cardsWithInfo;
+
+            foreach (CardEntry entry in _deck.cards)
+            {
+                if (entry == null || entry.count <= 0 || string.IsNullOrEmpty(entry.cardObjectName))
+                    continue;
+
+                CardInfo ci = CardManager.GetCardInfoWithName(entry.cardObjectName);
+                if (ci != null)
+                    cardsWithInfo.Add(ci);
+            }
+
+            SortCardsAlphabeticalThenRarity(cardsWithInfo);
+            return cardsWithInfo;
+        }
+
+        private void RefreshMyDeckViewIfActive()
+        {
+            if (_currentCategory != MyDeckCategory)
+                return;
+
+            _cachedCategoryCards = GetMyDeckCards();
+            int pageCount = GetPageCount();
+            if (_currentPage >= pageCount)
+                _currentPage = Mathf.Max(0, pageCount - 1);
+
+            RebuildPageButtons();
+            ShowPage(_currentPage);
         }
 
         /// <summary>Letter groups A→Z; within each letter, least rare first; ties broken by full name.</summary>
@@ -738,7 +814,11 @@ namespace DeckBuilder.UI
                 {
                     controlsGo.SetActive(false);
                     bgImg.color = new Color(0.1f, 0.1f, 0.14f, 0.85f);
+                    UpdateDeckCountDisplay();
+                    RefreshMyDeckViewIfActive();
+                    return;
                 }
+
                 UpdateDeckCountDisplay();
             });
 

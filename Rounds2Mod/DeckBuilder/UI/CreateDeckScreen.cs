@@ -10,6 +10,8 @@ namespace DeckBuilder.UI
     {
         public static CreateDeckScreen instance;
 
+        public bool IsOpen => _canvas != null && _canvas.gameObject.activeInHierarchy;
+
         private Canvas _canvas;
         private TMP_InputField _nameField;
         private TMP_InputField _maxSizeField;
