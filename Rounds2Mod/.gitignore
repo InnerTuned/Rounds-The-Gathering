@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+
+# Thunderstore/release packaging
+Release_Build/
+
+# Proprietary game and engine DLLs — cannot be redistributed.
+# Copy these from your ROUNDS install and r2modman profile into DeckBuilder/Libs/.
+# See How to run.md for exact paths.
+DeckBuilder/Libs/Assembly-CSharp.dll
+DeckBuilder/Libs/MMHOOK_Assembly-CSharp.dll
+DeckBuilder/Libs/UnityEngine.dll
+DeckBuilder/Libs/UnityEngine.CoreModule.dll
+DeckBuilder/Libs/UnityEngine.UI.dll
+DeckBuilder/Libs/Unity.TextMeshPro.dll
+DeckBuilder/Libs/Photon3Unity3D.dll
+DeckBuilder/Libs/PhotonRealtime.dll
+DeckBuilder/Libs/PhotonUnityNetworking.dll
+
+# Per-developer deploy path override (copy from Directory.Build.user.props.example)
+Directory.Build.user.props
+
+# OS / IDE noise
+.DS_Store
+Thumbs.db
+.vs/
+*.user

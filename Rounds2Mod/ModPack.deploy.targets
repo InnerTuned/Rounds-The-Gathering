@@ -1,0 +1,23 @@
+<Project>
+  <PropertyGroup>
+    <DeckBuilderOutDir>$(ModPackRoot)DeckBuilder\bin\$(Configuration)\net471</DeckBuilderOutDir>
+    <InfoOverhaulOutDir>$(ModPackRoot)InfographicsOverhaul\bin\$(Configuration)\net471</InfoOverhaulOutDir>
+    <ShieldsModOutDir>$(ModPackRoot)ShieldsMod\bin\$(Configuration)\net471</ShieldsModOutDir>
+    <ShieldsAssetsDir>$(ModPackRoot)ShieldsMod\assets</ShieldsAssetsDir>
+  </PropertyGroup>
+
+  <Target Name="DeployModPack">
+    <Message Importance="high" Text="Deploying mod pack to $(RtgPluginDir)" />
+    <MakeDir Directories="$(RtgPluginDir)" />
+    <MakeDir Directories="$(RtgAssetsDir)" />
+
+    <Copy SourceFiles="$(DeckBuilderOutDir)\DeckBuilder.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(InfoOverhaulOutDir)\InfoOverhaul.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ShieldsModOutDir)\ShieldsMod.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
+
+    <ItemGroup>
+      <ShieldCardAssets Include="$(ShieldsAssetsDir)\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ShieldCardAssets)" DestinationFolder="$(RtgAssetsDir)" SkipUnchangedFiles="true" Condition="Exists('$(ShieldsAssetsDir)')" />
+  </Target>
+</Project>

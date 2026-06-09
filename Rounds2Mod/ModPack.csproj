@@ -1,0 +1,26 @@
+<Project DefaultTargets="Build">
+
+  <Import Project="Directory.Build.props" />
+
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <ModPackRoot>$(MSBuildThisFileDirectory)</ModPackRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="DeckBuilder\DeckBuilder.csproj" />
+    <ProjectReference Include="InfographicsOverhaul\InfoOverhaul.csproj" />
+    <ProjectReference Include="ShieldsMod\ShieldsMod.csproj" />
+  </ItemGroup>
+
+  <Target Name="Build">
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)"
+             BuildInParallel="true" />
+    <CallTarget Targets="DeployModPack" />
+  </Target>
+
+  <Import Project="ModPack.deploy.targets" />
+
+</Project>

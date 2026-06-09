@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    Per-developer deploy path override.
+    Copy Directory.Build.user.props.example → Directory.Build.user.props and set RtgPluginDir
+    to your local r2modman plugin folder.  That file is gitignored so each dev keeps their own.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.user.props"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.user.props')" />
+
+  <PropertyGroup>
+    <!--
+      Fallback used when Directory.Build.user.props is absent.
+      Override by creating that file — see Directory.Build.user.props.example.
+    -->
+    <RtgPluginDir Condition="'$(RtgPluginDir)' == ''">OVERRIDE_IN_Directory.Build.user.props</RtgPluginDir>
+    <RtgAssetsDir>$(RtgPluginDir)\assets</RtgAssetsDir>
+    <ModPackRoot>$(MSBuildThisFileDirectory)</ModPackRoot>
+  </PropertyGroup>
+</Project>

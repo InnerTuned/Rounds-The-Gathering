@@ -1,0 +1,11 @@
+{
+    "name": "RoundsTheGathering",
+    "version_number": "2.0.0",
+    "website_url": "",
+    "description": "Rounds: The Gathering — deck building, card deletion, persistent shields, resistance cards, and a pick-phase stats overlay for ROUNDS.",
+    "dependencies": [
+        "BepInEx-BepInExPack_ROUNDS-5.4.1901",
+        "willis81808-UnboundLib-3.2.14",
+        "Pykess-ModdingUtils-0.4.8"
+    ]
+}

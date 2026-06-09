@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      Set this to the BepInEx plugins folder for the r2modman profile you develop against.
+      Typical path:
+        %AppData%\r2modmanPlus-local\ROUNDS\profiles\<YourProfile>\BepInEx\plugins\Rounds2-RoundsTheGathering
+
+      Steps:
+        1. Copy this file to Directory.Build.user.props (same folder, no ".example").
+        2. Replace the placeholder below with your actual path.
+        3. Build the solution — each successful build copies the DLLs and assets there automatically.
+    -->
+    <RtgPluginDir>C:\Users\YOUR_USERNAME\AppData\Roaming\r2modmanPlus-local\ROUNDS\profiles\Default\BepInEx\plugins\Rounds2-RoundsTheGathering</RtgPluginDir>
+  </PropertyGroup>
+</Project>
