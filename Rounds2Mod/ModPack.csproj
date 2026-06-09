@@ -11,6 +11,7 @@
     <ProjectReference Include="DeckBuilder\DeckBuilder.csproj" />
     <ProjectReference Include="InfographicsOverhaul\InfoOverhaul.csproj" />
     <ProjectReference Include="ShieldsMod\ShieldsMod.csproj" />
+    <ProjectReference Include="Keybound\Keybound.csproj" />
   </ItemGroup>
 
   <Target Name="Build">

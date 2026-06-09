@@ -11,9 +11,6 @@ namespace DeckBuilder.Data
     {
         public static DeckManager instance;
 
-        private const int MaxCountCommonUncommon = 3;
-        private const int MaxCountRareAndAbove = 1;
-
         private DeckCollection _collection = new DeckCollection();
         private string _savePath;
 
@@ -237,7 +234,7 @@ namespace DeckBuilder.Data
 
         /// <summary>
         /// Expands a DeckData into an array of CardInfo, duplicating entries per their count.
-        /// Rarity cap: Common/Uncommon max 3, Rare+ max 1.
+        /// Rarity cap: Trinket/Common/Scarce max 3, Uncommon/Rare/Exotic max 2, Epic+ max 1.
         /// Note: this builds the FULL pool including locked cards. Unlock gating is
         /// applied per-pick from the player's inventory (see DeckPickPatch), so locked
         /// cards remain in the RuntimeDeck and become draftable once their prerequisite
@@ -257,7 +254,7 @@ namespace DeckBuilder.Data
                     continue;
                 }
 
-                int maxCount = IsRareOrAbove(ci) ? MaxCountRareAndAbove : MaxCountCommonUncommon;
+                int maxCount = RarityDeckLimits.MaxCountFor(ci);
                 int clampedCount = Mathf.Clamp(entry.count, 0, maxCount);
                 for (int i = 0; i < clampedCount; i++)
                     result.Add(ci);
@@ -267,11 +264,7 @@ namespace DeckBuilder.Data
             return result.ToArray();
         }
 
-        public static bool IsRareOrAbove(CardInfo card) =>
-            card.rarity >= CardInfo.Rarity.Rare;
-
-        public static int MaxCountForCard(CardInfo card) =>
-            IsRareOrAbove(card) ? MaxCountRareAndAbove : MaxCountCommonUncommon;
+        public static int MaxCountForCard(CardInfo card) => RarityDeckLimits.MaxCountFor(card);
 
         /// <summary>Rebuilds all RuntimeDecks from each player's active deck at game start.</summary>
         public static void InitRuntimeDecks()

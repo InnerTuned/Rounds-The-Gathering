@@ -7,23 +7,20 @@ namespace ShieldsMod.Cards;
 public abstract class LifestealResistanceBase : CustomCard
 {
     protected abstract int Level { get; }
-    protected abstract float TotalReduction { get; }
     protected abstract string ArtFileName { get; }
     protected abstract CardInfo.Rarity CardRarity { get; }
-
-    public CardInfo NextLevelCard;
 
     protected override string GetTitle() => $"Lifesteal Resistance {Roman(Level)}";
 
     protected override string GetDescription() =>
-        $"Decrease enemy Life Steal healing against you by {PercentLabel(TotalReduction)}.";
+        ResistanceCardText.Description(Level, "lifesteal");
 
     protected override CardInfoStat[] GetStats() => new[]
     {
         new CardInfoStat
         {
             positive = true,
-            amount = PercentLabel(TotalReduction),
+            amount = ResistanceCardText.StatAmount(Level),
             stat = "Life Steal Resist",
             simepleAmount = CardInfoStat.SimpleAmount.notAssigned
         }
@@ -50,16 +47,18 @@ public abstract class LifestealResistanceBase : CustomCard
         if (player == null)
             return;
 
-        LifestealResistanceManager.instance?.RebuildForPlayer(player.playerID);
+        string cardName = cardInfo != null ? cardInfo.cardName : null;
+        ResistanceCardOnAdd.Apply(
+            player,
+            data,
+            Level,
+            cardName,
+            cards => LifestealHandRebuild.ComputeReductionFromHand(cards),
+            id => LifestealResistanceManager.instance?.RebuildForPlayer(id));
 
         SLog.Section($"LifestealResistance LV{Level} — OnAddCard");
-        SLog.Line($"player={player.playerID} totalReduction={TotalReduction * 100f:F0}%");
-
-        if (NextLevelCard != null)
-            SLog.Line($"Next tier '{NextLevelCard.cardName}' becomes draftable now that LV{Level} is owned.");
+        SLog.Line($"player={player.playerID} reduction={LifestealResistanceManager.instance?.GetReductionPercent(player.playerID):F0}%");
     }
-
-    private static string PercentLabel(float reduction) => $"{Mathf.RoundToInt(reduction * 100f)}%";
 
     private static string Roman(int level) => level switch
     {

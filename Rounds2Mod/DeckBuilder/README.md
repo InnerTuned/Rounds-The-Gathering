@@ -12,9 +12,10 @@ Create and manage named decks from any cards in the game. Each deck is:
 - Persisted to disk between sessions (`BepInEx/config/RoundsTheGathering/decks.json`)
 - Selectable per-match from a dedicated in-game screen
 
-Deck limits per card:
-- **Common / Uncommon:** max 3 copies
-- **Rare and above:** max 1 copy
+Deck limits per card (via [RarityLib](https://thunderstore.io/c/rounds/p/Root/RarityLib/) / [RarityBundle](https://thunderstore.io/c/rounds/p/CrazyCoders/RarityBundle/) rarity names):
+- **Trinket / Common / Scarce:** max 3 copies
+- **Uncommon / Rare / Exotic:** max 2 copies
+- **Epic and above** (Epic, Legendary, Mythical, Divine, Unique, etc.): max 1 copy
 
 ### Deck Selector Screen
 Replaces the vanilla Toggle Cards menu with a full deck management UI:
@@ -24,17 +25,18 @@ Replaces the vanilla Toggle Cards menu with a full deck management UI:
 - **Delete Deck** — removes a deck (with confirmation; the Default Deck cannot be deleted)
 - Active deck name is always shown at the bottom of the panel
 
+The card selection interface includes:
+- **Pagination** — displays 50 cards per page for smooth performance
+- **Search Bar** — filter cards by title or description (minimum 3 characters)
+- **Categories** — filter by "My Deck", "All Cards", or specific mod categories
+- Cards are sorted alphabetically and by rarity
+
 ### Pick-Phase Integration
 During card picks, the active deck becomes your draw pool. Cards are drawn randomly from your deck and shrink as you pick — just like a real deck. The remaining count displays in a HUD at the bottom of the screen.
 
 When all cards in your deck have been picked, the pool resets and you draw from the full deck again.
 
 If no custom deck is set (or a bot is picking), the full vanilla card pool is used as normal.
-
-### Card Deletion During Picks
-On your pick turn, you can **delete a card from your hand** instead of drafting a new one. Click any card in your card bar while the draft is open — it highlights red on hover, and a click removes it for the rest of the match.
-
-Deletion is networked (all clients stay in sync), ends your pick turn, and clears the draft choices on screen. Other mods can hook `CardDeleteManager.URPC_SyncDelete` to recalculate stats after a card is removed.
 
 ### Deck HUD
 A persistent overlay during pick phases shows:
@@ -58,6 +60,53 @@ Other mods can register prerequisites via direct reference or via reflection (se
 
 ---
 
+## New Cards
+
+DeckBuilder adds two special cards you can include in custom decks. Both use the same pick-phase selector UI beneath the card bars:
+
+```
+Select any card to duplicate          (Copycat)
+Select any card to delete             (Swap)
+
+[Cancel]  [Select]
+```
+
+**[Select]** starts greyed out until you click a card bar slot. Slots highlight blue on hover and green when selected.
+
+### Copycat (Rare)
+
+Pick Copycat from the draft table to duplicate another card instead of taking a normal pick.
+
+- **Source:** any filled slot on **any player's** card bar
+- **Confirm:** clones the chosen card onto your build; Copycat is consumed from your runtime deck and is **not** added to your hand; your pick turn ends
+- **Cancel:** closes the selector and returns you to the same draft hand; Copycat is **not** consumed
+
+### Swap (Uncommon)
+
+Pick Swap from the draft table to delete a card from your hand and draw a replacement.
+
+- **Source:** your own card bar only
+- **Confirm:** deletes the chosen instance of the card (networked — full stat reset and reapply survivors), consumes Swap from your deck, then deals a **new draft hand**
+- **Cancel:** closes the selector and returns you to the same draft hand; Swap is **not** consumed
+
+Swap replaces the old always-on card-bar delete buttons during picks. Hand deletion is now a card you deliberately put in your deck.
+
+### Info Overhaul integration
+
+If **Info Overhaul** is installed, the selector shows stat deltas while you hover card bar slots:
+
+- **Copycat** — add deltas (`If copying X:`)
+- **Swap** — removal deltas (`If removing X:`)
+
+### Debugging
+
+BepInEx logs are tagged for easy filtering during testing:
+
+- `[DeckBuilder:Copycat]`
+- `[DeckBuilder:Swap]`
+
+---
+
 ## How to Use
 
 1. Open the main menu and look for the **Deck Manager** button (where Toggle Cards used to be).
@@ -75,8 +124,10 @@ To go back to vanilla drafting, set the **Default Deck** as active.
 |-----|--------|-------|
 | **UnboundLib** | Required | Card registration and menu integration |
 | **ModdingUtils** | Required | Card framework |
-| **ShieldsMod** | Optional | Shield upgrade cards use the prerequisite API to gate tier II–V behind earlier tiers; rebuilds shield/resistance stats after card deletion |
-| **Info Overhaul** | Optional | Shows remaining deck count and card delta previews during picks |
+| **RarityLib** | Required | Custom rarity framework (extends the `CardInfo.Rarity` enum) — [Thunderstore](https://thunderstore.io/c/rounds/p/Root/RarityLib/) / [source](https://github.com/Tess-y/RarityLib) |
+| **RarityBundle** | Required | Standard modded rarities (Trinket, Scarce, Exotic, Epic, Mythical, Divine, Unique, etc.) — [Thunderstore](https://thunderstore.io/c/rounds/p/CrazyCoders/RarityBundle/) / [source](https://github.com/willuwontu/Rarity-Bundle) |
+| **ShieldsMod** | Optional | Rebuilds shield/resistance stats after Swap deletes a card |
+| **Info Overhaul** | Optional | Shows remaining deck count, draft-card delta previews, and Copycat/Swap selector stat previews during picks |
 
 ---
 

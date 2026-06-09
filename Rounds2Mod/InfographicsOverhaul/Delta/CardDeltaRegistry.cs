@@ -48,6 +48,12 @@ public static class CardDeltaRegistry
 
 
 
+    private static readonly Dictionary<string, DeltaProvider> RemovalProviders =
+
+        new Dictionary<string, DeltaProvider>(StringComparer.Ordinal);
+
+
+
     public static void RegisterSimple(string cardName, SimpleDeltaProvider provider) =>
 
         Register(cardName, (player, card) => ToLines(provider(player, card)));
@@ -116,6 +122,30 @@ public static class CardDeltaRegistry
 
 
 
+    public static void RegisterRemovalSimple(string cardName, SimpleDeltaProvider provider) =>
+
+        RegisterRemoval(cardName, (player, card) => ToLines(provider(player, card)));
+
+
+
+    public static void RegisterRemoval(string cardName, DeltaProvider provider)
+
+    {
+
+        if (string.IsNullOrEmpty(cardName) || provider == null)
+
+            return;
+
+
+
+        RemovalProviders[cardName] = provider;
+
+        IOLog.Line($"CardDeltaRegistry — removal registered '{cardName}'.");
+
+    }
+
+
+
     public static bool IsRegistered(string cardName) =>
 
         !string.IsNullOrEmpty(cardName) &&
@@ -177,6 +207,72 @@ public static class CardDeltaRegistry
 
 
         deltas = merged;
+
+        return true;
+
+    }
+
+
+
+    /// <summary>
+
+    /// Stat changes if <paramref name="card"/> is removed from the player's hand.
+
+    /// </summary>
+
+    public static bool TryGetRemovalDeltas(Player player, CardInfo card, out IReadOnlyList<StatDeltaLine> deltas)
+
+    {
+
+        deltas = null;
+
+        if (player == null || card == null)
+
+            return false;
+
+
+
+        string key = ResolveCardName(card);
+
+        if (string.IsNullOrEmpty(key))
+
+            return false;
+
+
+
+        if (RemovalProviders.TryGetValue(key, out DeltaProvider removal))
+
+        {
+
+            deltas = removal(player, card) ?? Array.Empty<StatDeltaLine>();
+
+            return true;
+
+        }
+
+
+
+        var templateRemoval = StatTemplateDeltaProvider.ComputeRemoval(player, card);
+
+        if (templateRemoval.Count > 0)
+
+        {
+
+            deltas = templateRemoval;
+
+            return true;
+
+        }
+
+
+
+        if (!TryGetDeltas(player, card, out IReadOnlyList<StatDeltaLine> addDeltas) || addDeltas.Count == 0)
+
+            return false;
+
+
+
+        deltas = addDeltas.Select(line => line.Inverted).ToList();
 
         return true;
 

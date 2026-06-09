@@ -11,6 +11,8 @@ namespace DeckBuilder.UI
     {
         public static DeckSelectorScreen instance;
 
+        public bool IsOpen => _canvas != null && _canvas.gameObject.activeInHierarchy;
+
         private Canvas _canvas;
         private Button _createBtn;
         private Button _editBtn;

@@ -15,6 +15,9 @@ namespace DeckBuilder.GameIntegration
         // The permanent vanilla pool — captured the first time we see it.
         private static CardInfo[] _vanillaPool;
 
+        // Exposed so SpecialCardPatches can restore the pool after a special-card flow.
+        internal static CardInfo[] VanillaPool => _vanillaPool;
+
         // Saved pool to restore after a custom-deck pick.
         private static CardInfo[] _savedPool;
 
@@ -189,6 +192,10 @@ namespace DeckBuilder.GameIntegration
         [HarmonyPostfix]
         static void ApplyStats_Postfix(ApplyCardStats __instance)
         {
+            // Suppress during special-card flows (Copycat, Changed Mind) to avoid
+            // incorrectly consuming cards or clobbering the pool mid-flow.
+            if (DeckBuilder.Cards.SpecialCardPatches.SuppressApplyStatsPostfix) return;
+
             CardInfo card = __instance.GetComponentInParent<CardInfo>();
             if (card == null) return;
 

@@ -1,6 +1,6 @@
-# Builds all three mods and assembles a Thunderstore-ready ZIP.
+# Builds all mods and assembles a Thunderstore-ready ZIP.
 # Usage: .\build_package.ps1
-# Requires icon.png in ThunderstorePackage\ (committed to the repo).
+# Requires icon.png in ThunderstorePackage (committed to the repo).
 
 $ErrorActionPreference = "Stop"
 $Root = $PSScriptRoot
@@ -9,8 +9,9 @@ $ModPackProject = Join-Path $Root "ModPack.csproj"
 
 $Projects = @(
     @{ Name = "DeckBuilder"; Project = "DeckBuilder\DeckBuilder.csproj"; Dll = "DeckBuilder.dll" },
-    @{ Name = "ShieldsMod";  Project = "ShieldsMod\ShieldsMod.csproj";                 Dll = "ShieldsMod.dll" },
-    @{ Name = "InfoOverhaul"; Project = "InfographicsOverhaul\InfoOverhaul.csproj";   Dll = "InfoOverhaul.dll" }
+    @{ Name = "ShieldsMod";  Project = "ShieldsMod\ShieldsMod.csproj"; Dll = "ShieldsMod.dll" },
+    @{ Name = "InfoOverhaul"; Project = "InfographicsOverhaul\InfoOverhaul.csproj"; Dll = "InfoOverhaul.dll" },
+    @{ Name = "Keybound"; Project = "Keybound\Keybound.csproj"; Dll = "Keybound.dll" }
 )
 
 $PackageDir = Join-Path $Root "ThunderstorePackage"
@@ -27,49 +28,65 @@ $zipName = "RoundsTheGathering_$version.zip"
 $staging = Join-Path $Root "Release_Build"
 $stageRoot = Join-Path $staging "stage"
 
-Write-Host "=== Building Rounds The Gathering v$version ===" -ForegroundColor Cyan
+Write-Host ('=== Building Rounds The Gathering v{0} ===' -f $version) -ForegroundColor Cyan
 
-Write-Host "Building all mods (ModPack)..." -ForegroundColor Yellow
+Write-Host 'Building all mods (ModPack)...' -ForegroundColor Yellow
 dotnet build $ModPackProject -c Release
-if ($LASTEXITCODE -ne 0) { Write-Error "Build failed: ModPack.csproj" }
+if ($LASTEXITCODE -ne 0) {
+    Write-Error 'Build failed: ModPack.csproj'
+}
 
-if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
+if (Test-Path $staging) {
+    Remove-Item $staging -Recurse -Force
+}
 New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
 
 Copy-Item $ManifestPath (Join-Path $stageRoot "manifest.json")
 Copy-Item (Join-Path $PackageDir "README.md") (Join-Path $stageRoot "README.md")
 
 if (-not (Test-Path $IconPath)) {
-    Write-Error "icon.png not found at $IconPath. The file should be committed to ThunderstorePackage\."
+    Write-Error "icon.png not found at $IconPath. The file should be committed to ThunderstorePackage."
 }
 Copy-Item $IconPath (Join-Path $stageRoot "icon.png")
 
 foreach ($p in $Projects) {
     $projectDir = Join-Path $Root (Split-Path $p.Project -Parent)
-    $dllSrc = Join-Path $projectDir "bin\Release\net471\$($p.Dll)"
+    $dllSrc = Join-Path $projectDir (Join-Path 'bin\Release\net471' $p.Dll)
     if (-not (Test-Path $dllSrc)) {
-        Write-Error "DLL not found: $dllSrc (did the build succeed?)"
+        Write-Error "DLL not found: $dllSrc. Did the build succeed?"
     }
     Copy-Item $dllSrc (Join-Path $stageRoot $p.Dll)
-    Write-Host "  + $($p.Dll)" -ForegroundColor Green
+    Write-Host ('  + {0}' -f $p.Dll) -ForegroundColor Green
 }
 
-$assetsSrc = Join-Path $Root "ShieldsMod\assets"
 $assetsDst = Join-Path $stageRoot "assets"
-if (Test-Path $assetsSrc) {
-    Copy-Item $assetsSrc $assetsDst -Recurse
-    $count = (Get-ChildItem $assetsDst -Filter "*.png").Count
-    Write-Host "  + assets/ ($count PNGs)" -ForegroundColor Green
-} else {
-    Write-Warning "ShieldsMod\assets not found - card art will be missing from the package."
+New-Item -ItemType Directory -Path $assetsDst -Force | Out-Null
+
+$assetDirs = @(
+    (Join-Path $Root "ShieldsMod\assets"),
+    (Join-Path $Root "DeckBuilder\assets"),
+    (Join-Path $Root "Keybound\assets")
+)
+foreach ($assetsSrc in $assetDirs) {
+    if (Test-Path $assetsSrc) {
+        Copy-Item (Join-Path $assetsSrc "*.png") $assetsDst -Force
+    }
+    else {
+        Write-Warning "$assetsSrc not found - some card art may be missing from the package."
+    }
 }
+
+$count = (Get-ChildItem $assetsDst -Filter "*.png" -ErrorAction SilentlyContinue).Count
+Write-Host ('  + assets/ {0} PNGs' -f $count) -ForegroundColor Green
 
 $zipPath = Join-Path $staging $zipName
-if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+if (Test-Path $zipPath) {
+    Remove-Item $zipPath -Force
+}
 
 $items = Get-ChildItem $stageRoot
-Compress-Archive -Path ($items | ForEach-Object { $_.FullName }) -DestinationPath $zipPath -Force
+Compress-Archive -Path @($items.FullName) -DestinationPath $zipPath -Force
 
 Write-Host ""
 Write-Host "Package ready: $zipPath" -ForegroundColor Cyan
-Write-Host "Upload this ZIP to Thunderstore as Rounds2 / RoundsTheGathering" -ForegroundColor Cyan
+Write-Host 'Upload this ZIP to Thunderstore as Rounds2 / RoundsTheGathering' -ForegroundColor Cyan

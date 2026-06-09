@@ -78,6 +78,10 @@
       <HintPath>Libs\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="RarityLib">
+      <HintPath>..\DeckBuilder\Libs\RarityLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <Target Name="CopyAssetsToOutput" AfterTargets="Build">

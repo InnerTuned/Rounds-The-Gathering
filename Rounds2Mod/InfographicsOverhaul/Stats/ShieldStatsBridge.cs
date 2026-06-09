@@ -8,7 +8,7 @@ namespace InfoOverhaul.Stats;
 internal static class ShieldStatsBridge
 {
     private static bool _resolved;
-    private static PropertyInfo _instanceProp;
+    private static FieldInfo _instanceField;
     private static MethodInfo _getShield;
     private static FieldInfo _currentField;
     private static FieldInfo _maxField;
@@ -18,7 +18,7 @@ internal static class ShieldStatsBridge
         get
         {
             Resolve();
-            return _instanceProp != null && _getShield != null;
+            return _instanceField != null && _getShield != null;
         }
     }
 
@@ -45,12 +45,12 @@ internal static class ShieldStatsBridge
                 return;
             }
 
-            _instanceProp = managerType.GetProperty("instance", BindingFlags.Public | BindingFlags.Static);
+            _instanceField = managerType.GetField("instance", BindingFlags.Public | BindingFlags.Static);
             _getShield = managerType.GetMethod("GetShield", BindingFlags.Public | BindingFlags.Instance);
             _currentField = stateType.GetField("Current", BindingFlags.Public | BindingFlags.Instance);
             _maxField = stateType.GetField("Max", BindingFlags.Public | BindingFlags.Instance);
 
-            if (_instanceProp == null || _getShield == null || _currentField == null || _maxField == null)
+            if (_instanceField == null || _getShield == null || _currentField == null || _maxField == null)
                 IOLog.Warn("ShieldsMod shield API incomplete.");
         }
         catch (Exception ex)
@@ -65,12 +65,12 @@ internal static class ShieldStatsBridge
         max = 0f;
         Resolve();
 
-        if (_instanceProp == null || _getShield == null)
+        if (_instanceField == null || _getShield == null)
             return false;
 
         try
         {
-            var manager = _instanceProp.GetValue(null);
+            var manager = _instanceField.GetValue(null);
             if (manager == null)
                 return false;
 

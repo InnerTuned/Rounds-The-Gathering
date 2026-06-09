@@ -34,6 +34,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\InfographicsOverhaul\InfoOverhaul.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="0Harmony">
       <HintPath>Libs\0Harmony.dll</HintPath>
       <Private>false</Private>
@@ -72,6 +78,10 @@
     </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>Libs\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RarityLib">
+      <HintPath>Libs\RarityLib.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

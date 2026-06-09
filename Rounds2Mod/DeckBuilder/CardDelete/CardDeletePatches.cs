@@ -3,10 +3,10 @@ using HarmonyLib;
 namespace DeckBuilder.CardDelete;
 
 /// <summary>
-/// Harmony patches that run at the correct time in the pick flow.
-/// UnboundLib's HookPlayerPickStart fires before pickrID is assigned; these patches do not.
+/// Harmony patches that used to attach the card-bar delete buttons.
+/// The delete mechanic is now handled by the "Changed Mind" card — see SpecialCardPatches.
+/// Class is kept for reference but the [HarmonyPatch] attribute is removed so nothing runs.
 /// </summary>
-[HarmonyPatch]
 internal static class CardDeletePatches
 {
     [HarmonyPatch(typeof(CardChoiceVisuals), nameof(CardChoiceVisuals.Show))]

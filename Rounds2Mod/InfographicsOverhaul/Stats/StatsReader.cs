@@ -90,7 +90,11 @@ internal static class StatsReader
     private static string FormatShieldHealth(int playerID)
     {
         if (ShieldStatsBridge.TryGetShieldHealth(playerID, out float current, out float max))
-            return $"Shield Health: {current:f0} / {max:f0}";
+        {
+            return max > 0f
+                ? $"Shield Health: {current:f0} / {max:f0}"
+                : "Shield Health: None";
+        }
 
         return ShieldStatsBridge.IsAvailable
             ? "Shield Health: — / —"
