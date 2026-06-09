@@ -22,7 +22,9 @@ namespace DeckBuilder.UI
 
         private const string MyDeckCategory = "My Deck";
         private const string AllCardsCategory = "All Cards";
+        private const string SearchResultsCategory = "Search Results";
         private const int CardsPerPage = 50;
+        private const int MinSearchLength = 3;
 
         private static readonly Color PageIdleColor = new Color(0.15f, 0.15f, 0.22f);
         private static readonly Color PageSelectedColor = Color.white;
@@ -36,6 +38,8 @@ namespace DeckBuilder.UI
         private DeckData _deck;
         private string _currentCategory;
         private int _currentPage;
+        private string _searchQuery = "";
+        private bool _isSearchActive;
         private List<CardInfo> _cachedCategoryCards = new List<CardInfo>();
 
         // ── UI roots ──────────────────────────────────────────────────────────────
@@ -73,6 +77,7 @@ namespace DeckBuilder.UI
         {
             RTGLog.Section($"DeckEditorScreen — Open deck '{deck?.name}'");
             _deck = deck;
+            ClearSearch();
             _canvas.gameObject.SetActive(true);
             BuildCategoryButtons();
             ShowCategory(AllCardsCategory);
@@ -119,12 +124,13 @@ namespace DeckBuilder.UI
                 new Vector2(0f, 0.92f), Vector2.one,
                 bg: new Color(0.1f, 0.1f, 0.15f, 0.95f));
 
-            _searchField = UIHelper.CreateInputField(topBar, "SearchField", "Search cards...",
+            _searchField = UIHelper.CreateInputField(topBar, "SearchField", "Search cards (3+ chars)...",
                 Vector2.zero, Vector2.zero, fontSize: 20);
             var searchRt = _searchField.GetComponent<RectTransform>();
             searchRt.anchorMin = new Vector2(0.01f, 0.15f);
             searchRt.anchorMax = new Vector2(0.35f, 0.85f);
             searchRt.offsetMin = searchRt.offsetMax = Vector2.zero;
+            _searchField.onValueChanged.AddListener(OnSearchChanged);
 
             _deckCountText = UIHelper.CreateText(topBar, "DeckCountText", "Cards in Deck: 0",
                 fontSize: 22, alignment: TextAlignmentOptions.MidlineLeft);
@@ -338,6 +344,11 @@ namespace DeckBuilder.UI
         private void ShowCategory(string category)
         {
             RTGLog.Section($"DeckEditorScreen — ShowCategory '{category}'");
+
+            if (_isSearchActive && category != SearchResultsCategory)
+                ClearSearch();
+
+            _isSearchActive = false;
             _currentCategory = category;
             _currentPage = 0;
             _cachedCategoryCards = GetCardsForCategory(category);
@@ -505,7 +516,8 @@ namespace DeckBuilder.UI
                 if (btn == null)
                     continue;
 
-                bool selected = i < _categoryButtonNames.Count
+                bool selected = !_isSearchActive
+                    && i < _categoryButtonNames.Count
                     && _categoryButtonNames[i] == _currentCategory;
                 ApplyNavButtonStyle(btn, selected);
             }
@@ -620,6 +632,69 @@ namespace DeckBuilder.UI
 
             RebuildPageButtons();
             ShowPage(_currentPage);
+        }
+
+        // ── Search ────────────────────────────────────────────────────────────────
+
+        private void OnSearchChanged(string query)
+        {
+            _searchQuery = query?.Trim() ?? "";
+
+            if (_searchQuery.Length >= MinSearchLength)
+            {
+                _isSearchActive = true;
+                _currentCategory = SearchResultsCategory;
+                _currentPage = 0;
+                _cachedCategoryCards = SearchCards(_searchQuery);
+
+                RTGLog.Line($"Search '{_searchQuery}' found {_cachedCategoryCards.Count} card(s).");
+
+                UpdateCategoryButtonStyles();
+                RebuildPageButtons();
+                ShowPage(0);
+            }
+            else if (_isSearchActive)
+            {
+                _isSearchActive = false;
+                ShowCategory(AllCardsCategory);
+            }
+        }
+
+        private List<CardInfo> SearchCards(string query)
+        {
+            var results = new List<CardInfo>();
+            if (string.IsNullOrEmpty(query))
+                return results;
+
+            string lowerQuery = query.ToLowerInvariant();
+
+            foreach (string cardName in CardManager.cards.Keys)
+            {
+                CardInfo ci = CardManager.GetCardInfoWithName(cardName);
+                if (ci == null)
+                    continue;
+
+                bool matchesTitle = !string.IsNullOrEmpty(ci.cardName)
+                    && ci.cardName.ToLowerInvariant().Contains(lowerQuery);
+
+                bool matchesDescription = !string.IsNullOrEmpty(ci.cardDestription)
+                    && ci.cardDestription.ToLowerInvariant().Contains(lowerQuery);
+
+                if (matchesTitle || matchesDescription)
+                    results.Add(ci);
+            }
+
+            SortCardsAlphabeticalThenRarity(results);
+            return results;
+        }
+
+        private void ClearSearch()
+        {
+            if (_searchField != null)
+                _searchField.text = "";
+
+            _searchQuery = "";
+            _isSearchActive = false;
         }
 
         /// <summary>Letter groups A→Z; within each letter, least rare first; ties broken by full name.</summary>
@@ -959,7 +1034,16 @@ namespace DeckBuilder.UI
         {
             if (_deck == null) return;
             int total = _deck.TotalCount;
-            _deckCountText.text = $"Cards in Deck: {total} / {_deck.maxSize}";
+
+            if (_isSearchActive)
+            {
+                _deckCountText.text = $"Found {_cachedCategoryCards.Count} cards — Deck: {total} / {_deck.maxSize}";
+            }
+            else
+            {
+                _deckCountText.text = $"Cards in Deck: {total} / {_deck.maxSize}";
+            }
+
             _deckCountText.color = total > _deck.maxSize
                 ? new Color(1f, 0.3f, 0.3f)
                 : Color.white;
