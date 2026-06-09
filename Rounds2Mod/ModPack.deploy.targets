@@ -4,6 +4,7 @@
     <InfoOverhaulOutDir>$(ModPackRoot)InfographicsOverhaul\bin\$(Configuration)\net471</InfoOverhaulOutDir>
     <ShieldsModOutDir>$(ModPackRoot)ShieldsMod\bin\$(Configuration)\net471</ShieldsModOutDir>
     <ShieldsAssetsDir>$(ModPackRoot)ShieldsMod\assets</ShieldsAssetsDir>
+    <DeckBuilderAssetsDir>$(ModPackRoot)DeckBuilder\assets</DeckBuilderAssetsDir>
   </PropertyGroup>
 
   <Target Name="DeployModPack">
@@ -19,5 +20,10 @@
       <ShieldCardAssets Include="$(ShieldsAssetsDir)\*.png" />
     </ItemGroup>
     <Copy SourceFiles="@(ShieldCardAssets)" DestinationFolder="$(RtgAssetsDir)" SkipUnchangedFiles="true" Condition="Exists('$(ShieldsAssetsDir)')" />
+
+    <ItemGroup>
+      <DeckBuilderCardAssets Include="$(DeckBuilderAssetsDir)\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DeckBuilderCardAssets)" DestinationFolder="$(RtgAssetsDir)" SkipUnchangedFiles="true" Condition="Exists('$(DeckBuilderAssetsDir)')" />
   </Target>
 </Project>

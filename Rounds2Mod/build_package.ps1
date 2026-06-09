@@ -54,15 +54,22 @@ foreach ($p in $Projects) {
     Write-Host "  + $($p.Dll)" -ForegroundColor Green
 }
 
-$assetsSrc = Join-Path $Root "ShieldsMod\assets"
 $assetsDst = Join-Path $stageRoot "assets"
-if (Test-Path $assetsSrc) {
-    Copy-Item $assetsSrc $assetsDst -Recurse
-    $count = (Get-ChildItem $assetsDst -Filter "*.png").Count
-    Write-Host "  + assets/ ($count PNGs)" -ForegroundColor Green
-} else {
-    Write-Warning "ShieldsMod\assets not found - card art will be missing from the package."
+New-Item -ItemType Directory -Path $assetsDst -Force | Out-Null
+
+$assetDirs = @(
+    (Join-Path $Root "ShieldsMod\assets"),
+    (Join-Path $Root "DeckBuilder\assets")
+)
+foreach ($assetsSrc in $assetDirs) {
+    if (Test-Path $assetsSrc) {
+        Copy-Item (Join-Path $assetsSrc "*.png") $assetsDst -Force
+    } else {
+        Write-Warning "$assetsSrc not found - some card art may be missing from the package."
+    }
 }
+$count = (Get-ChildItem $assetsDst -Filter "*.png" -ErrorAction SilentlyContinue).Count
+Write-Host "  + assets/ ($count PNGs)" -ForegroundColor Green
 
 $zipPath = Join-Path $staging $zipName
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }

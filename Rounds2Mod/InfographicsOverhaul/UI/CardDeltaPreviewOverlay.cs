@@ -117,7 +117,7 @@ public class CardDeltaPreviewOverlay : MonoBehaviour
             return;
         }
 
-        _headerText.text = $"If {card.cardName}:";
+        _headerText.text = $"If selecting {card.cardName}:";
 
         if (!CardDeltaRegistry.TryGetDeltas(player, card, out IReadOnlyList<StatDeltaLine> deltas))
         {

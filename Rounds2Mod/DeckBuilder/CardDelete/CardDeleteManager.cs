@@ -22,7 +22,7 @@ public class CardDeleteManager : MonoBehaviour
     public static int currentPickerID = -1;
 
     private static readonly MethodInfo s_rpca_assignCard = AccessTools.Method(
-        typeof(Cards),
+        typeof(ModdingUtils.Utils.Cards),
         "RPCA_AssignCard",
         new Type[] { typeof(string), typeof(int), typeof(bool), typeof(string), typeof(float), typeof(float), typeof(bool) });
 
@@ -208,7 +208,7 @@ public class CardDeleteManager : MonoBehaviour
         CardDeleteLog.Section("Deletion logic — stat reset");
         try
         {
-            Cards.RPCA_FullReset(playerID);
+            ModdingUtils.Utils.Cards.RPCA_FullReset(playerID);
             CardDeleteLog.Line("RPCA_FullReset completed.");
         }
         catch (Exception ex)
@@ -218,7 +218,7 @@ public class CardDeleteManager : MonoBehaviour
 
         try
         {
-            Cards.RPCA_ClearCardBar(playerID);
+            ModdingUtils.Utils.Cards.RPCA_ClearCardBar(playerID);
             CardDeleteLog.Line("RPCA_ClearCardBar completed.");
         }
         catch (Exception ex)
@@ -252,7 +252,7 @@ public class CardDeleteManager : MonoBehaviour
         EndPickPhase();
     }
 
-    private static void EndPickPhase()
+    internal static void EndPickPhase()
     {
         CardDeleteLog.Section("EndPickPhase");
 
@@ -297,7 +297,7 @@ public class CardDeleteManager : MonoBehaviour
         CardDeleteLog.Line($"After: IsPicking={cc.IsPicking}");
     }
 
-    private static void CleanupSpawnedDraftCards(CardChoice cc)
+    internal static void CleanupSpawnedDraftCards(CardChoice cc)
     {
         CardDeleteLog.Section("EndPickPhase — cleanup draft cards");
 

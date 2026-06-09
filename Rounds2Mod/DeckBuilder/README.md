@@ -32,28 +32,6 @@ When all cards in your deck have been picked, the pool resets and you draw from 
 
 If no custom deck is set (or a bot is picking), the full vanilla card pool is used as normal.
 
-### Card Deletion During Picks
-On your pick turn, you can **delete a card from your hand** instead of drafting a new one. Click any card in your card bar while the draft is open — it highlights red on hover.
-
-A **confirmation modal** appears before anything is removed:
-
-```
-Are you sure you want to delete Big Mag?
-
-DMG: 82 --> 55
-Ammo: 5 --> 3
-
-[No]  [Yes]
-```
-
-- The modal is **fully opaque** — you cannot interact with the pick screen behind it.
-- **No** closes the modal and you continue picking normally.
-- **Yes** deletes the card for the rest of the match.
-
-If **Info Overhaul** is installed, the modal shows the stat changes that deletion will cause (same green/red formatting as the draft-card delta preview). Cards without a registered preview show **N/A**.
-
-Deletion is networked (all clients stay in sync), ends your pick turn, and clears the draft choices on screen. Other mods can hook `CardDeleteManager.URPC_SyncDelete` to recalculate stats after a card is removed.
-
 ### Deck HUD
 A persistent overlay during pick phases shows:
 
@@ -76,6 +54,53 @@ Other mods can register prerequisites via direct reference or via reflection (se
 
 ---
 
+## New Cards
+
+DeckBuilder adds two special cards you can include in custom decks. Both use the same pick-phase selector UI beneath the card bars:
+
+```
+Select any card to duplicate          (Copycat)
+Select any card to delete             (Swap)
+
+[Cancel]  [Select]
+```
+
+**[Select]** starts greyed out until you click a card bar slot. Slots highlight blue on hover and green when selected.
+
+### Copycat (Rare)
+
+Pick Copycat from the draft table to duplicate another card instead of taking a normal pick.
+
+- **Source:** any filled slot on **any player's** card bar
+- **Confirm:** clones the chosen card onto your build; Copycat is consumed from your runtime deck and is **not** added to your hand; your pick turn ends
+- **Cancel:** Copycat is still consumed; a fresh draft hand is dealt so you can pick normally
+
+### Swap (Uncommon)
+
+Pick Swap from the draft table to delete a card from your hand and draw a replacement.
+
+- **Source:** your own card bar only
+- **Confirm:** deletes the chosen card (networked — full stat reset and reapply survivors), consumes Swap from your deck, then deals a **new draft hand**
+- **Cancel:** Swap is still consumed; a fresh draft hand is dealt
+
+Swap replaces the old always-on card-bar delete buttons during picks. Hand deletion is now a card you deliberately put in your deck.
+
+### Info Overhaul integration
+
+If **Info Overhaul** is installed, the selector shows stat deltas while you hover card bar slots:
+
+- **Copycat** — add deltas (`If copying X:`)
+- **Swap** — removal deltas (`If removing X:`)
+
+### Debugging
+
+BepInEx logs are tagged for easy filtering during testing:
+
+- `[DeckBuilder:Copycat]`
+- `[DeckBuilder:Swap]`
+
+---
+
 ## How to Use
 
 1. Open the main menu and look for the **Deck Manager** button (where Toggle Cards used to be).
@@ -95,8 +120,8 @@ To go back to vanilla drafting, set the **Default Deck** as active.
 | **ModdingUtils** | Required | Card framework |
 | **RarityLib** | Required | Custom rarity framework (extends the `CardInfo.Rarity` enum) — [Thunderstore](https://thunderstore.io/c/rounds/p/Root/RarityLib/) / [source](https://github.com/Tess-y/RarityLib) |
 | **RarityBundle** | Required | Standard modded rarities (Trinket, Scarce, Exotic, Epic, Mythical, Divine, Unique, etc.) — [Thunderstore](https://thunderstore.io/c/rounds/p/CrazyCoders/RarityBundle/) / [source](https://github.com/willuwontu/Rarity-Bundle) |
-| **ShieldsMod** | Optional | Rebuilds shield/resistance stats after card deletion |
-| **Info Overhaul** | Optional | Shows remaining deck count, draft-card delta previews, and delete-confirmation stat previews during picks |
+| **ShieldsMod** | Optional | Rebuilds shield/resistance stats after Swap deletes a card |
+| **Info Overhaul** | Optional | Shows remaining deck count, draft-card delta previews, and Copycat/Swap selector stat previews during picks |
 
 ---
 

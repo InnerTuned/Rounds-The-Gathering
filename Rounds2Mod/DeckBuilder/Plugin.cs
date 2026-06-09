@@ -1,8 +1,10 @@
+using System.IO;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 using DeckBuilder.CardDelete;
+using DeckBuilder.Cards;
 using DeckBuilder.Data;
 using DeckBuilder.UI;
 using DeckBuilder.GameIntegration;
@@ -13,14 +15,19 @@ namespace DeckBuilder;
 [BepInDependency("pykess.rounds.plugins.moddingutils", BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency("root.rarity.lib", BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency("com.CrazyCoders.Rounds.RarityBundle", BepInDependency.DependencyFlags.HardDependency)]
+[BepInDependency("InfoOverhaul", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : BaseUnityPlugin
 {
     internal static new ManualLogSource Logger;
 
+    /// <summary>Directory the plugin DLL lives in (used by CardArtLoader).</summary>
+    internal static string PluginDirectory { get; private set; }
+
     private void Awake()
     {
         Logger = base.Logger;
+        PluginDirectory = Path.GetDirectoryName(Info.Location) ?? "";
         RTGLog.Section("Plugin Awake");
 
         new Harmony(MyPluginInfo.PLUGIN_GUID).PatchAll();
@@ -38,7 +45,13 @@ public class Plugin : BaseUnityPlugin
         uiRoot.AddComponent<CreateDeckScreen>();
         uiRoot.AddComponent<DeckEditorScreen>();
         uiRoot.AddComponent<DeckBuilderUiInputLock>();
+        uiRoot.AddComponent<CardBarSelectorUI>();
 
         RTGLog.Line($"Plugin {MyPluginInfo.PLUGIN_GUID} loaded.");
+    }
+
+    private void Start()
+    {
+        DeckBuilderCardRegistrar.RegisterAll();
     }
 }
