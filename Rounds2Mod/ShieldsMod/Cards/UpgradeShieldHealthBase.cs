@@ -8,17 +8,15 @@ namespace ShieldsMod.Cards;
 public abstract class UpgradeShieldHealthBase : CustomCard
 {
     protected abstract int Level { get; }
+    protected abstract float FirstShieldMax { get; }
     protected abstract float Multiplier { get; }
     protected abstract string ArtFileName { get; }
     protected abstract CardInfo.Rarity CardRarity { get; }
 
-    /// <summary>CardInfo for the next tier; assigned during BuildCard registration.</summary>
-    public CardInfo NextLevelCard;
-
     protected override string GetTitle() => $"Upgrade Shield Health {Roman(Level)}";
 
     protected override string GetDescription() =>
-        $"Increases max shield health by {PercentLabel(Multiplier)}. Multiplies with other shield upgrades.";
+        $"Grants or increases max shield health by {PercentLabel(Multiplier)}. First pickup sets a base shield if you have none.";
 
     protected override CardInfoStat[] GetStats() => new[]
     {
@@ -58,7 +56,7 @@ public abstract class UpgradeShieldHealthBase : CustomCard
 
         if (!state.HasShield)
         {
-            state.Max = ShieldState.DefaultMax * Multiplier;
+            state.Max = FirstShieldMax;
             state.Current = state.Max;
         }
         else
@@ -70,15 +68,7 @@ public abstract class UpgradeShieldHealthBase : CustomCard
         ShieldManager.instance.RefreshVisual(playerID);
 
         SLog.Section($"UpgradeShieldHealth LV{Level} — OnAddCard");
-        SLog.Line($"player={playerID} multiplier={Multiplier:F2} max {before:F1} -> {state.Max:F1}");
-
-        // No manual enable needed: the next tier unlocks automatically because RTG
-        // re-evaluates prerequisites against the player's hand each pick, and this
-        // card is now in their hand.
-        if (NextLevelCard != null)
-            SLog.Line($"Next tier '{NextLevelCard.cardName}' becomes draftable now that LV{Level} is owned.");
-        else
-            SLog.Line("This is the final tier (no next level).");
+        SLog.Line($"player={playerID} firstMax={FirstShieldMax:F0} multiplier={Multiplier:F2} max {before:F1} -> {state.Max:F1}");
     }
 
     private static string PercentLabel(float multiplier) =>

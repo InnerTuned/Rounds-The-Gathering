@@ -25,6 +25,10 @@ public readonly struct StatDeltaLine
     /// <summary>Effect-only line for Tier-2 cards (stats + custom mechanics).</summary>
     public static StatDeltaLine Note(string text) => new StatDeltaLine(text, null, null, isNote: true);
 
+    /// <summary>Swaps before/after for card-removal previews (add deltas shown in reverse).</summary>
+    public StatDeltaLine Inverted =>
+        IsNote ? this : new StatDeltaLine(Label, After, Before);
+
     public string Format() =>
         IsNote ? Label : $"{Label}: {Before} --> {After}";
 

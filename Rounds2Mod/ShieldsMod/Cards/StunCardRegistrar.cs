@@ -17,32 +17,6 @@ internal static class StunCardRegistrar
     {
         StunCardRegistry.Lv1 = ci;
         SLog.Line($"Registered Stun Resistance LV1: {ci.cardName}");
-
-        StunCardRegistry.WireLevelChain();
-        RegisterPrerequisites();
         StunCardDeltaRegistrar.RegisterAll();
-    }
-
-    private static void RegisterPrerequisites()
-    {
-        SLog.Section("StunCardRegistrar — RegisterPrerequisites");
-
-        if (!RtgPrerequisiteBridge.IsAvailable)
-        {
-            SLog.Warn("DeckBuilder not available — stun cards will NOT be unlock-gated.");
-            return;
-        }
-
-        TryRegister(StunCardRegistry.Lv2, StunCardRegistry.Lv1);
-        TryRegister(StunCardRegistry.Lv3, StunCardRegistry.Lv2);
-    }
-
-    private static void TryRegister(CardInfo card, CardInfo required)
-    {
-        if (card == null || required == null)
-            return;
-
-        bool ok = RtgPrerequisiteBridge.Register(card.cardName, required.cardName);
-        SLog.Line($"Prereq: \"{card.cardName}\" requires \"{required.cardName}\" — registered={ok}");
     }
 }

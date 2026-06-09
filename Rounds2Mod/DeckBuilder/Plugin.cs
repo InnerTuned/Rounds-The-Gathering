@@ -11,6 +11,8 @@ namespace DeckBuilder;
 
 [BepInDependency("com.willis.rounds.unbound", BepInDependency.DependencyFlags.HardDependency)]
 [BepInDependency("pykess.rounds.plugins.moddingutils", BepInDependency.DependencyFlags.HardDependency)]
+[BepInDependency("root.rarity.lib", BepInDependency.DependencyFlags.HardDependency)]
+[BepInDependency("com.CrazyCoders.Rounds.RarityBundle", BepInDependency.DependencyFlags.HardDependency)]
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : BaseUnityPlugin
 {

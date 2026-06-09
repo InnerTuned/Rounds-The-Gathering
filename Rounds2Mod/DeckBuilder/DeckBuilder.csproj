@@ -74,6 +74,10 @@
       <HintPath>Libs\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="RarityLib">
+      <HintPath>Libs\RarityLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
 </Project>

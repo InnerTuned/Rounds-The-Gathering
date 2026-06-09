@@ -1,42 +1,24 @@
 using System;
 using System.Collections.Generic;
+using ShieldsMod.Resistance;
 
 namespace ShieldsMod.Lifesteal;
 
 internal static class LifestealHandRebuild
 {
-    private static Dictionary<string, float> _reductionByCardName;
+    private static Dictionary<string, int> _levelByCardName;
 
-    internal static void RegisterTier(string cardName, float totalReduction)
+    internal static void RegisterTier(string cardName, int level)
     {
-        if (string.IsNullOrEmpty(cardName))
+        if (string.IsNullOrEmpty(cardName) || level < 1 || level > 3)
             return;
 
-        _reductionByCardName ??= new Dictionary<string, float>(StringComparer.Ordinal);
-        _reductionByCardName[cardName] = totalReduction;
+        _levelByCardName ??= new Dictionary<string, int>(StringComparer.Ordinal);
+        _levelByCardName[cardName] = level;
     }
 
-    internal static float ComputeReductionFromHand(IEnumerable<CardInfo> cards)
-    {
-        float best = 0f;
-        if (_reductionByCardName == null || cards == null)
-            return best;
-
-        foreach (CardInfo card in cards)
-        {
-            if (card == null)
-                continue;
-
-            string name = card.cardName;
-            if (string.IsNullOrEmpty(name) && card.sourceCard != null)
-                name = card.sourceCard.cardName;
-
-            if (!string.IsNullOrEmpty(name) && _reductionByCardName.TryGetValue(name, out float reduction))
-                best = Math.Max(best, reduction);
-        }
-
-        return best;
-    }
+    internal static float ComputeReductionFromHand(IEnumerable<CardInfo> cards, CardInfo exclude = null) =>
+        ResistanceTierLogic.ComputeFromHand(cards, _levelByCardName, exclude);
 
     internal static void RebuildForPlayer(int playerID)
     {

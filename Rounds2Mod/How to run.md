@@ -29,12 +29,20 @@ Create a ROUNDS profile in r2modman and install these mods before testing your l
 - BepInEx Pack
 - UnboundLib
 - ModdingUtils
+- RarityLib (and its dependency CardChoiceSpawnUniqueCardPatch — installed automatically with RarityLib)
+- RarityBundle (installed automatically once listed in the modpack manifest)
 
 Our modpack adds on top of these; it does not replace them.
+
+Reference sources (read-only, excluded from compile):
+- `DeckBuilder/Reference_Mods/RarityLib/` — [github.com/Tess-y/RarityLib](https://github.com/Tess-y/RarityLib)
+- `DeckBuilder/Reference_Mods/Rarity-Bundle/` — [github.com/willuwontu/Rarity-Bundle](https://github.com/willuwontu/Rarity-Bundle)
 
 ### 2. Copy the proprietary game DLLs into `DeckBuilder/Libs/`
 
 Most reference DLLs (0Harmony, UnboundLib, ModdingUtils) are **already committed to the repo** and require no extra steps.
+
+Also copy **`RarityLib.dll`** from your r2modman profile (`BepInEx/plugins/Root-RarityLib/`) into `DeckBuilder/Libs/` — required to compile DeckBuilder and ShieldsMod against custom rarities.
 
 You only need to manually copy the following because they are proprietary and cannot be distributed in source control:
 
@@ -136,7 +144,8 @@ Create a fresh r2modman profile, install only **Rounds2 — RoundsTheGathering**
 
 - Deck Manager appears in the main menu
 - Shield card art renders (not blank)
-- Show Stats button works during picks
+- Show Stats button works during picks (shield health and resistances populate correctly)
+- Clicking a hand card during picks opens the delete confirmation modal with stat preview; **No** dismisses, **Yes** deletes
 
 ---
 
@@ -145,6 +154,7 @@ Create a fresh r2modman profile, install only **Rounds2 — RoundsTheGathering**
 ```
 Rounds2Mod/
   DeckBuilder/           # Deck builder + card delete source (Libs/ included except game DLLs)
+                         # Reference_Mods/RarityLib/ and Rarity-Bundle/ — upstream rarity sources
   ShieldsMod/            # Shields + resistance cards + assets/
   InfographicsOverhaul/  # Stats / delta preview source
   ThunderstorePackage/   # manifest.json, README.md, icon.png

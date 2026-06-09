@@ -73,7 +73,7 @@ public class CardBarDeleteButton : MonoBehaviour,
         }
 
         CardDeleteLog.Line($"Valid delete click on '{card.cardName}' (objectName='{card.name}').");
-        CardDeleteManager.instance?.RequestDelete(card);
+        CardDeleteManager.instance?.ShowDeleteConfirm(card);
     }
 
     private CardInfo GetCardInfo()

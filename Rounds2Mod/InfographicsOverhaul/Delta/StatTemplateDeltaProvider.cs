@@ -92,6 +92,103 @@ internal static class StatTemplateDeltaProvider
         return lines;
     }
 
+    /// <summary>Inverse of <see cref="Compute"/> — stats after removing one copy of the card from the hand.</summary>
+    public static IReadOnlyList<StatDeltaLine> ComputeRemoval(Player player, CardInfo card)
+    {
+        if (player == null || card == null)
+            return Array.Empty<StatDeltaLine>();
+
+        var cardRoot = card.sourceCard != null ? card.sourceCard.gameObject : card.gameObject;
+
+        var cardGun = cardRoot.GetComponent<Gun>();
+        var cardPlayer = cardRoot.GetComponent<CharacterStatModifiers>();
+        var cardBlock = cardRoot.GetComponentInChildren<Block>();
+
+        if (!HasStatTemplate(cardGun, cardPlayer, cardBlock))
+            return Array.Empty<StatDeltaLine>();
+
+        Gun gun = player.data?.weaponHandler?.gun;
+        Block block = player.data?.block;
+        CharacterData data = player.data;
+        CharacterStatModifiers stats = player.GetComponent<CharacterStatModifiers>();
+        GunAmmo ammo = gun != null ? gun.GetComponentInChildren<GunAmmo>() : null;
+
+        var lines = new List<StatDeltaLine>();
+
+        if (cardPlayer != null && data != null && stats != null)
+        {
+            TryAdd(lines, "HP", data.maxHealth,
+                SafeDivide(data.maxHealth, cardPlayer.health), "f0");
+            TryAdd(lines, "Lives", stats.respawns + 1f,
+                stats.respawns - cardPlayer.respawns + 1f, "f0");
+            TryAdd(lines, "Move SPD", stats.movementSpeed,
+                SafeDivide(stats.movementSpeed, cardPlayer.movementSpeed), "f2");
+            TryAdd(lines, "Jump Height", stats.jump,
+                SafeDivide(stats.jump, cardPlayer.jump), "f2");
+            TryAdd(lines, "Player Size", stats.sizeMultiplier,
+                SafeDivide(stats.sizeMultiplier, cardPlayer.sizeMultiplier), "f2");
+            TryAdd(lines, "Life Steal", stats.lifeSteal,
+                stats.lifeSteal - cardPlayer.lifeSteal, "f2");
+        }
+
+        if (cardBlock != null && block != null)
+        {
+            float cdBefore = block.Cooldown();
+            float cdAfter = SafeDivide(
+                cdBefore,
+                (block.cdMultiplier * cardBlock.cdMultiplier));
+            cdAfter = (cdAfter - block.cdAdd - cardBlock.cdAdd) / Mathf.Max(block.cdMultiplier, Epsilon);
+            TryAdd(lines, "Block CD", cdBefore, cdAfter, "f2", suffix: "s");
+            TryAdd(lines, "Block Count", block.additionalBlocks + 1f,
+                block.additionalBlocks - cardBlock.additionalBlocks + 1f, "f0");
+        }
+
+        if (cardGun != null && gun != null)
+        {
+            float dmgBefore = (gun.damage * 55f) * gun.bulletDamageMultiplier;
+            float dmgAfter = (InverseApplyGunDamage(gun.damage, gun.numberOfProjectiles, cardGun) * 55f)
+                * SafeDivide(gun.bulletDamageMultiplier, cardGun.bulletDamageMultiplier);
+            TryAdd(lines, "DMG", dmgBefore, dmgAfter, "f0");
+
+            TryAdd(lines, "Knockback", gun.knockback,
+                InverseApplyKnockback(gun.knockback, gun.numberOfProjectiles, cardGun), "f2");
+            TryAdd(lines, "Damage Grow", gun.damageAfterDistanceMultiplier,
+                SafeDivide(gun.damageAfterDistanceMultiplier, cardGun.damageAfterDistanceMultiplier), "f2");
+            TryAdd(lines, "Bullet Slow", gun.slow, gun.slow - cardGun.slow, "f2");
+            TryAdd(lines, "Attack SPD", gun.attackSpeed * gun.attackSpeedMultiplier,
+                SafeDivide(gun.attackSpeed, cardGun.attackSpeed) * gun.attackSpeedMultiplier, "f2", suffix: "s");
+            TryAdd(lines, "Bullet SPD", gun.projectileSpeed,
+                SafeDivide(gun.projectileSpeed, cardGun.projectileSpeed), "f2");
+            TryAdd(lines, "Projectile SPD", gun.projectielSimulatonSpeed,
+                SafeDivide(gun.projectielSimulatonSpeed, cardGun.projectielSimulatonSpeed), "f2");
+            TryAdd(lines, "Bullet Gravity", gun.gravity,
+                SafeDivide(gun.gravity, cardGun.gravity), "f2");
+            TryAdd(lines, "Bullets", gun.numberOfProjectiles,
+                gun.numberOfProjectiles - cardGun.numberOfProjectiles, "f0");
+            TryAdd(lines, "Bounces", gun.reflects, gun.reflects - cardGun.reflects, "f0");
+            TryAdd(lines, "Bursts", gun.bursts, gun.bursts - cardGun.bursts, "f0");
+
+            if (cardGun.destroyBulletAfter != 0f)
+                TryAdd(lines, "Bullet Range", gun.destroyBulletAfter,
+                    gun.destroyBulletAfter - cardGun.destroyBulletAfter, "f2");
+            else
+                TryAdd(lines, "Bullet Range", gun.destroyBulletAfter,
+                    gun.destroyBulletAfter - cardGun.destroyBulletAfter, "f2");
+        }
+
+        if (cardGun != null && ammo != null)
+        {
+            float reloadBefore = (ammo.reloadTime + ammo.reloadTimeAdd) * ammo.reloadTimeMultiplier;
+            float reloadAfter = (ammo.reloadTime + ammo.reloadTimeAdd - cardGun.reloadTimeAdd)
+                * SafeDivide(ammo.reloadTimeMultiplier, cardGun.reloadTime);
+            TryAdd(lines, "Reload Time", reloadBefore, reloadAfter, "f2", suffix: "s");
+            TryAdd(lines, "Ammo", ammo.maxAmmo,
+                Mathf.Clamp(ammo.maxAmmo - cardGun.ammo, 1, 90), "f0");
+        }
+
+        return lines;
+    }
+
     internal static bool HasStatTemplate(Gun cardGun, CharacterStatModifiers cardPlayer, Block cardBlock)
     {
         if (cardGun != null && GunHasChanges(cardGun))
@@ -151,6 +248,33 @@ internal static class StatTemplateDeltaProvider
     {
         float blend = ProjectileBlendFactor(cardGun.numberOfProjectiles, currentProjectiles);
         return currentKnockback * (1f - blend * (1f - cardGun.knockback));
+    }
+
+    private static float SafeDivide(float value, float divisor)
+    {
+        if (Mathf.Abs(divisor) < Epsilon)
+            return value;
+        return value / divisor;
+    }
+
+    private static float InverseApplyGunDamage(float currentDamage, int currentProjectiles, Gun cardGun)
+    {
+        int projBeforeCard = Mathf.Max(1, currentProjectiles - cardGun.numberOfProjectiles);
+        float blend = ProjectileBlendFactor(cardGun.numberOfProjectiles, projBeforeCard);
+        float factor = 1f - blend * (1f - cardGun.damage);
+        if (Mathf.Abs(factor) < Epsilon)
+            return currentDamage;
+        return Mathf.Max(currentDamage / factor, 0.25f);
+    }
+
+    private static float InverseApplyKnockback(float currentKnockback, int currentProjectiles, Gun cardGun)
+    {
+        int projBeforeCard = Mathf.Max(1, currentProjectiles - cardGun.numberOfProjectiles);
+        float blend = ProjectileBlendFactor(cardGun.numberOfProjectiles, projBeforeCard);
+        float factor = 1f - blend * (1f - cardGun.knockback);
+        if (Mathf.Abs(factor) < Epsilon)
+            return currentKnockback;
+        return currentKnockback / factor;
     }
 
     private static void TryAdd(List<StatDeltaLine> lines, string label, float before, float after,

@@ -34,9 +34,12 @@ public class CardDeleteManager : MonoBehaviour
     private static MethodInfo s_photonDestroy;
     private static PropertyInfo s_photonOfflineMode;
 
+    private CardDeleteConfirmModal _confirmModal;
+
     private void Start()
     {
         instance = this;
+        _confirmModal = gameObject.AddComponent<CardDeleteConfirmModal>();
         GameModeManager.AddHook(GameModeHooks.HookPlayerPickStart, OnPlayerPickStart);
         GameModeManager.AddHook(GameModeHooks.HookPlayerPickEnd, OnPlayerPickEnd);
         CardDeleteLog.Section("CardDeleteManager initialized");
@@ -81,6 +84,7 @@ public class CardDeleteManager : MonoBehaviour
 
         isPickPhase = false;
         currentPickerID = -1;
+        _confirmModal?.Hide();
         DisableDeleteMode();
         yield break;
     }
@@ -150,6 +154,21 @@ public class CardDeleteManager : MonoBehaviour
             Destroy(btn);
 
         CardDeleteLog.Line($"DisableDeleteMode: removed {count} CardBarDeleteButton component(s).");
+    }
+
+    public void ShowDeleteConfirm(CardInfo card)
+    {
+        if (card == null || !isPickPhase || !IsLocalPlayerTurn())
+            return;
+
+        Player player = PlayerManager.instance?.players.Find(p => p.playerID == currentPickerID);
+        if (player == null)
+        {
+            CardDeleteLog.Warn("ShowDeleteConfirm: picker player not found.");
+            return;
+        }
+
+        _confirmModal?.Show(player, card, () => RequestDelete(card));
     }
 
     public void RequestDelete(CardInfo card)
