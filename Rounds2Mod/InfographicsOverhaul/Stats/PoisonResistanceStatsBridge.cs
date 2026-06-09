@@ -8,7 +8,7 @@ namespace InfoOverhaul.Stats;
 internal static class PoisonResistanceStatsBridge
 {
     private static bool _resolved;
-    private static PropertyInfo _instanceProp;
+    private static FieldInfo _instanceField;
     private static MethodInfo _getPercent;
 
     public static bool IsAvailable
@@ -16,7 +16,7 @@ internal static class PoisonResistanceStatsBridge
         get
         {
             Resolve();
-            return _instanceProp != null && _getPercent != null;
+            return _instanceField != null && _getPercent != null;
         }
     }
 
@@ -36,7 +36,7 @@ internal static class PoisonResistanceStatsBridge
             if (type == null)
                 return;
 
-            _instanceProp = type.GetProperty("instance", BindingFlags.Public | BindingFlags.Static);
+            _instanceField = type.GetField("instance", BindingFlags.Public | BindingFlags.Static);
             _getPercent = type.GetMethod("GetReductionPercent", BindingFlags.Public | BindingFlags.Instance);
         }
         catch (Exception ex)
@@ -50,12 +50,12 @@ internal static class PoisonResistanceStatsBridge
         percent = 0f;
         Resolve();
 
-        if (_instanceProp == null || _getPercent == null)
+        if (_instanceField == null || _getPercent == null)
             return false;
 
         try
         {
-            var manager = _instanceProp.GetValue(null);
+            var manager = _instanceField.GetValue(null);
             if (manager == null)
                 return false;
 
