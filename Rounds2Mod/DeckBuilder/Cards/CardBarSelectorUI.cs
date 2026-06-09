@@ -50,10 +50,10 @@ namespace DeckBuilder.Cards
         internal static readonly Color HoverColor    = new Color(0.25f, 0.55f, 1.00f, 1f);
         internal static readonly Color SelectedColor = new Color(0.15f, 0.75f, 0.25f, 1f);
 
-        private static readonly Color PanelBg       = new Color(0.04f, 0.06f, 0.12f, 0.95f);
-        private static readonly Color CancelBg       = new Color(0.40f, 0.10f, 0.10f, 0.95f);
-        private static readonly Color SelectReadyBg  = new Color(0.10f, 0.45f, 0.12f, 0.95f);
-        private static readonly Color SelectGrayBg   = new Color(0.18f, 0.18f, 0.18f, 0.55f);
+        private static readonly Color PanelBg       = new Color(0.04f, 0.06f, 0.12f, 1f);
+        private static readonly Color CancelBg       = new Color(0.40f, 0.10f, 0.10f, 1f);
+        private static readonly Color SelectReadyBg  = new Color(0.10f, 0.45f, 0.12f, 1f);
+        private static readonly Color SelectGrayBg   = new Color(0.18f, 0.18f, 0.18f, 1f);
 
         private static readonly FieldInfo s_cardBarButtonCard =
             AccessTools.Field(typeof(CardBarButton), "card");
@@ -72,9 +72,9 @@ namespace DeckBuilder.Cards
         {
             _canvas = UIHelper.CreateFullscreenCanvas("RTG_CardSelectorUI", sortOrder: 180);
 
-            // Main action panel (bottom)
+            // Main action panel (vertically centered)
             var panel = UIHelper.CreatePanel(_canvas.transform, "SelectorPanel",
-                new Vector2(0.10f, 0.09f), new Vector2(0.90f, 0.19f),
+                new Vector2(0.10f, 0.38f), new Vector2(0.90f, 0.48f),
                 bg: PanelBg);
 
             _messageText = UIHelper.CreateText(panel, "Message", "",
@@ -132,8 +132,8 @@ namespace DeckBuilder.Cards
 
             // Delta preview panel (above action panel)
             var deltaPanel = UIHelper.CreatePanel(_canvas.transform, "DeltaPanel",
-                new Vector2(0.10f, 0.20f), new Vector2(0.90f, 0.32f),
-                bg: new Color(0.03f, 0.04f, 0.08f, 0.90f));
+                new Vector2(0.10f, 0.50f), new Vector2(0.90f, 0.62f),
+                bg: new Color(0.03f, 0.04f, 0.08f, 1f));
 
             _deltaPreviewText = UIHelper.CreateText(deltaPanel, "DeltaText", "",
                 fontSize: 18, alignment: TextAlignmentOptions.MidlineLeft,

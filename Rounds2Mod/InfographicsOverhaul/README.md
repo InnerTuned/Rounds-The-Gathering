@@ -33,7 +33,7 @@ If Big Mag:
 DMG: 55 --> 82     Ammo: 3 --> 5
 ```
 
-- After-values are **green** when the stat increases, **red** when it decreases
+- After-values are colored based on context (e.g., **green** for increased damage, **green** for *decreased* reload time, **red** for negative impacts)
 - Up to **3 stat changes per column**; extra stats overflow into additional columns to the right (supports up to 15 lines)
 - Cards with no registered delta show **N/A**
 - Effect notes (custom mechanics that can't be expressed numerically) appear as plain text lines

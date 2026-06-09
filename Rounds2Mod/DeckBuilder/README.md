@@ -25,6 +25,12 @@ Replaces the vanilla Toggle Cards menu with a full deck management UI:
 - **Delete Deck** — removes a deck (with confirmation; the Default Deck cannot be deleted)
 - Active deck name is always shown at the bottom of the panel
 
+The card selection interface includes:
+- **Pagination** — displays 50 cards per page for smooth performance
+- **Search Bar** — filter cards by title or description (minimum 3 characters)
+- **Categories** — filter by "My Deck", "All Cards", or specific mod categories
+- Cards are sorted alphabetically and by rarity
+
 ### Pick-Phase Integration
 During card picks, the active deck becomes your draw pool. Cards are drawn randomly from your deck and shrink as you pick — just like a real deck. The remaining count displays in a HUD at the bottom of the screen.
 
@@ -80,7 +86,7 @@ Pick Copycat from the draft table to duplicate another card instead of taking a 
 Pick Swap from the draft table to delete a card from your hand and draw a replacement.
 
 - **Source:** your own card bar only
-- **Confirm:** deletes the chosen card (networked — full stat reset and reapply survivors), consumes Swap from your deck, then deals a **new draft hand**
+- **Confirm:** deletes the chosen instance of the card (networked — full stat reset and reapply survivors), consumes Swap from your deck, then deals a **new draft hand**
 - **Cancel:** closes the selector and returns you to the same draft hand; Swap is **not** consumed
 
 Swap replaces the old always-on card-bar delete buttons during picks. Hand deletion is now a card you deliberately put in your deck.

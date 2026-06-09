@@ -3,8 +3,10 @@
     <DeckBuilderOutDir>$(ModPackRoot)DeckBuilder\bin\$(Configuration)\net471</DeckBuilderOutDir>
     <InfoOverhaulOutDir>$(ModPackRoot)InfographicsOverhaul\bin\$(Configuration)\net471</InfoOverhaulOutDir>
     <ShieldsModOutDir>$(ModPackRoot)ShieldsMod\bin\$(Configuration)\net471</ShieldsModOutDir>
+    <KeyboundOutDir>$(ModPackRoot)Keybound\bin\$(Configuration)\net471</KeyboundOutDir>
     <ShieldsAssetsDir>$(ModPackRoot)ShieldsMod\assets</ShieldsAssetsDir>
     <DeckBuilderAssetsDir>$(ModPackRoot)DeckBuilder\assets</DeckBuilderAssetsDir>
+    <KeyboundAssetsDir>$(ModPackRoot)Keybound\assets</KeyboundAssetsDir>
   </PropertyGroup>
 
   <Target Name="DeployModPack">
@@ -15,6 +17,7 @@
     <Copy SourceFiles="$(DeckBuilderOutDir)\DeckBuilder.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(InfoOverhaulOutDir)\InfoOverhaul.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ShieldsModOutDir)\ShieldsMod.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(KeyboundOutDir)\Keybound.dll" DestinationFolder="$(RtgPluginDir)" SkipUnchangedFiles="true" />
 
     <ItemGroup>
       <ShieldCardAssets Include="$(ShieldsAssetsDir)\*.png" />
@@ -25,5 +28,10 @@
       <DeckBuilderCardAssets Include="$(DeckBuilderAssetsDir)\*.png" />
     </ItemGroup>
     <Copy SourceFiles="@(DeckBuilderCardAssets)" DestinationFolder="$(RtgAssetsDir)" SkipUnchangedFiles="true" Condition="Exists('$(DeckBuilderAssetsDir)')" />
+
+    <ItemGroup>
+      <KeyboundCardAssets Include="$(KeyboundAssetsDir)\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(KeyboundCardAssets)" DestinationFolder="$(RtgAssetsDir)" SkipUnchangedFiles="true" Condition="Exists('$(KeyboundAssetsDir)')" />
   </Target>
 </Project>

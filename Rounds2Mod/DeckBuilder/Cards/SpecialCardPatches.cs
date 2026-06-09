@@ -290,9 +290,10 @@ namespace DeckBuilder.Cards
             SwapLog.Section("Confirm — delete card");
             if (selectedCard != null)
             {
-                SwapLog.Line($"Deleting '{selectedCard.cardName}' (object='{selectedCard.gameObject.name}') for player {_pickerID}.");
+                int cardIndex = _pickerPlayer?.data?.currentCards?.IndexOf(selectedCard) ?? -1;
+                SwapLog.Line($"Deleting '{selectedCard.cardName}' (object='{selectedCard.gameObject.name}', index={cardIndex}) for player {_pickerID}.");
                 NetworkingManager.RPC(typeof(SpecialCardPatches), nameof(URPC_DeleteCard),
-                    _pickerID, selectedCard.gameObject.name);
+                    _pickerID, cardIndex);
             }
             else
             {
@@ -306,10 +307,10 @@ namespace DeckBuilder.Cards
         // ── Networked delete (all clients) ────────────────────────────────────────
 
         [UnboundRPC]
-        public static void URPC_DeleteCard(int playerID, string cardObjectName)
+        public static void URPC_DeleteCard(int playerID, int cardIndex)
         {
             SwapLog.Section("URPC_DeleteCard (all clients)");
-            SwapLog.Line($"playerID={playerID}, deleteCardObject='{cardObjectName}'");
+            SwapLog.Line($"playerID={playerID}, deleteCardIndex={cardIndex}");
 
             Player player = PlayerManager.instance?.players?.Find(p => p.playerID == playerID);
             if (player == null)
@@ -318,14 +319,20 @@ namespace DeckBuilder.Cards
                 return;
             }
 
-            // Build survivor list (exclude the card being deleted)
-            var survivors = new List<string>();
-            foreach (var c in player.data.currentCards)
+            if (cardIndex < 0 || cardIndex >= player.data.currentCards.Count)
             {
+                SwapLog.Error($"Invalid cardIndex={cardIndex} (hand size={player.data.currentCards?.Count ?? 0}).");
+                return;
+            }
+
+            // Build survivor list — exclude exactly one card by index (handles duplicate card names).
+            var survivors = new List<string>();
+            for (int i = 0; i < player.data.currentCards.Count; i++)
+            {
+                if (i == cardIndex) continue;
+                var c = player.data.currentCards[i];
                 if (c == null) continue;
-                string n = c.gameObject.name;
-                if (n == cardObjectName || n == cardObjectName + "(Clone)") continue;
-                survivors.Add(n);
+                survivors.Add(c.gameObject.name);
             }
 
             SwapLog.Line($"currentCards before reset: {player.data.currentCards?.Count ?? 0}");

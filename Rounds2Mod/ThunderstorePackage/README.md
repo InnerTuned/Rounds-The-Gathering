@@ -1,6 +1,6 @@
 # Rounds: The Gathering
 
-One install, three mods — a complete pick-phase overhaul for ROUNDS.
+One install, four mods — a complete pick-phase overhaul for ROUNDS.
 
 ---
 
@@ -10,8 +10,15 @@ One install, three mods — a complete pick-phase overhaul for ROUNDS.
 - Build and save custom card decks (up to 50 cards)
 - Draft only from your active deck during picks
 - Deck HUD showing remaining cards
-- **Delete a card from your hand** during picks instead of drafting — with a confirmation modal and stat-change preview
+- **Deck Manager UI** with pagination, search, and a "My Deck" view
+- **Swap card** to delete a card from your hand during picks — with a confirmation modal and stat-change preview
+- **Copycat card** to duplicate any card from any player's hand
 - Tiered card unlock API for other mods
+
+### Keybound Mod
+- Utility cards with **[Keybound]** effects
+- Bind a key during the draft, then activate the effect from the **Effect Stack** (bottom-right)
+- **Teleport** card: teleport to your cursor on a cooldown
 
 ### ShieldsMod
 - Persistent shield bubble (unlocked via **Upgrade Shield Health I**)
@@ -79,7 +86,8 @@ For a Thunderstore ZIP:
 
 | File | Role |
 |------|------|
-| `DeckBuilder.dll` | Deck builder, card deletion (with confirmation), prerequisites |
+| `DeckBuilder.dll` | Deck builder, custom cards (Swap/Copycat), prerequisites |
+| `Keybound.dll` | Keybound effects, Effect Stack UI, Teleport card |
 | `ShieldsMod.dll` | Shields and resistance cards |
 | `InfoOverhaul.dll` | Stats popup, draft delta preview, delete stat preview |
-| `assets/` | ShieldsMod card artwork (PNG) |
+| `assets/` | Mod card artwork (PNG) |
