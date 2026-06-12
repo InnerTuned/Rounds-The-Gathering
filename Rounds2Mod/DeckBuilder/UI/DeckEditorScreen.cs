@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using UnboundLib;
 using UnboundLib.Utils;
 using DeckBuilder.Data;
+using DeckBuilder.GameIntegration;
 
 namespace DeckBuilder.UI
 {
@@ -578,7 +579,7 @@ namespace DeckBuilder.UI
             foreach (string cardName in cardNames)
             {
                 CardInfo ci = CardManager.GetCardInfoWithName(cardName);
-                if (ci != null)
+                if (ci != null && !ModCardVisibilityBridge.IsHidden(ci))
                     cardsWithInfo.Add(ci);
             }
 
@@ -589,13 +590,25 @@ namespace DeckBuilder.UI
         private List<CardInfo> GetAllCardsAlphabetical()
         {
             var cardsWithInfo = new List<CardInfo>(CardManager.cards.Count);
+            int hiddenCount = 0;
             foreach (string cardName in CardManager.cards.Keys)
             {
                 CardInfo ci = CardManager.GetCardInfoWithName(cardName);
-                if (ci != null)
+                if (ci == null)
+                    continue;
+
+                if (ModCardVisibilityBridge.IsHidden(ci))
+                {
+                    hiddenCount++;
+                    RTGLog.Line($"GetAllCardsAlphabetical: hiding '{ci.cardName}'");
+                }
+                else
+                {
                     cardsWithInfo.Add(ci);
+                }
             }
 
+            RTGLog.Line($"GetAllCardsAlphabetical: {cardsWithInfo.Count} visible, {hiddenCount} hidden");
             SortCardsAlphabeticalThenRarity(cardsWithInfo);
             return cardsWithInfo;
         }
@@ -671,7 +684,7 @@ namespace DeckBuilder.UI
             foreach (string cardName in CardManager.cards.Keys)
             {
                 CardInfo ci = CardManager.GetCardInfoWithName(cardName);
-                if (ci == null)
+                if (ci == null || ModCardVisibilityBridge.IsHidden(ci))
                     continue;
 
                 bool matchesTitle = !string.IsNullOrEmpty(ci.cardName)
@@ -752,7 +765,7 @@ namespace DeckBuilder.UI
             bgImg.raycastTarget = true;
 
             // ── Instantiate the actual card visual ──────────────────────────────
-            SetupCardVisual(cardInfo, rowGo);
+            CardVisualHelper.SetupCardVisual(cardInfo, rowGo);
 
             // ── Rarity label overlay at bottom (Image + TMP must be on separate objects) ──
             var rarityLabelGo = new GameObject("RarityLabel");
@@ -904,119 +917,6 @@ namespace DeckBuilder.UI
                 countTmp.text = entry.count.ToString();
                 UpdateDeckCountDisplay();
             });
-        }
-
-        /// <summary>
-        /// Instantiates the actual card prefab as a visual, similar to ToggleCardsMenuHandler.
-        /// </summary>
-        private void SetupCardVisual(CardInfo cardInfo, GameObject parent)
-        {
-            RTGLog.Line($"SetupCardVisual '{cardInfo.cardName}': cardArt={(cardInfo.cardArt != null ? cardInfo.cardArt.name : "NULL")}");
-
-            // Instantiate the card prefab
-            GameObject cardObject = Instantiate(cardInfo.gameObject, parent.transform);
-            cardObject.name = "CardVisual";
-            cardObject.SetActive(true);
-
-            // Remove unnecessary parts
-            var back = FindChildByName(cardObject, "Back");
-            if (back != null) Destroy(back);
-
-            var damagable = FindChildByName(cardObject, "Damagable");
-            if (damagable != null) Destroy(damagable);
-
-            // Remove particle systems (cause lag in menus)
-            var particles = FindChildByName(cardObject, "UI_ParticleSystem");
-            if (particles != null) Destroy(particles);
-
-            // Disable block front
-            var blockFront = FindChildByName(cardObject, "BlockFront");
-            if (blockFront != null) blockFront.SetActive(false);
-
-            // Make all canvas groups visible
-            foreach (var cg in cardObject.GetComponentsInChildren<CanvasGroup>(true))
-            {
-                cg.alpha = 1;
-            }
-
-            // Set up card visuals
-            foreach (var cv in cardObject.GetComponentsInChildren<CardVisuals>(true))
-            {
-                cv.firstValueToSet = true;
-            }
-
-            // Disable animations on the card for static menu display
-            foreach (var anim in cardObject.GetComponentsInChildren<Animator>(true))
-            {
-                anim.enabled = false;
-            }
-            foreach (var curveAnim in cardObject.GetComponentsInChildren<CurveAnimation>(true))
-            {
-                curveAnim.enabled = false;
-            }
-
-            // Scale and position the card to fit in our container
-            var cardRt = cardObject.GetOrAddComponent<RectTransform>();
-            cardRt.localScale = Vector3.one * 15f; // Larger scale to fill the 220x300 cell
-            cardRt.anchorMin = new Vector2(0.5f, 0.5f);
-            cardRt.anchorMax = new Vector2(0.5f, 0.5f);
-            cardRt.pivot = new Vector2(0.5f, 0.5f);
-            cardRt.anchoredPosition = new Vector2(0, 10f); // Slight upward offset for controls
-
-            // Disable raycasting on the card visual so clicks go to the parent
-            foreach (var graphic in cardObject.GetComponentsInChildren<Graphic>(true))
-            {
-                graphic.raycastTarget = false;
-            }
-
-            // Manually place card art so we don't depend on CardVisuals.Start()
-            // which requires CardChoice.instance (not available in menu scenes).
-            if (cardInfo.cardArt != null)
-            {
-                var artTransform = FindChildByName(cardObject, "Art");
-                RTGLog.Line($"SetupCardVisual '{cardInfo.cardName}': Art transform={(artTransform != null ? artTransform.name : "NOT FOUND")}");
-                if (artTransform != null)
-                {
-                    var clone = Instantiate(cardInfo.cardArt, artTransform.transform);
-                    clone.transform.SetAsFirstSibling();
-
-                    // Reset RectTransform to fill parent (card art templates may have off-screen positioning)
-                    var cloneRt = clone.GetComponent<RectTransform>();
-                    if (cloneRt != null)
-                    {
-                        cloneRt.anchorMin = Vector2.zero;
-                        cloneRt.anchorMax = Vector2.one;
-                        cloneRt.offsetMin = Vector2.zero;
-                        cloneRt.offsetMax = Vector2.zero;
-                        cloneRt.localPosition = Vector3.zero;
-                        cloneRt.localScale = Vector3.one;
-                        RTGLog.Line($"SetupCardVisual '{cardInfo.cardName}': Art RectTransform reset to fill parent.");
-                    }
-                    else
-                    {
-                        clone.transform.localPosition = Vector3.zero;
-                        clone.transform.localScale = Vector3.one;
-                    }
-                    RTGLog.Line($"SetupCardVisual '{cardInfo.cardName}': Art placed successfully.");
-                }
-                else
-                {
-                    RTGLog.Warn($"SetupCardVisual '{cardInfo.cardName}': 'Art' child not found — cannot place card art.");
-                }
-            }
-            else
-            {
-                RTGLog.Line($"SetupCardVisual '{cardInfo.cardName}': no cardArt set, skipping art placement.");
-            }
-        }
-
-        private static GameObject FindChildByName(GameObject parent, string name)
-        {
-            foreach (Transform child in parent.GetComponentsInChildren<Transform>(true))
-            {
-                if (child.name == name) return child.gameObject;
-            }
-            return null;
         }
 
         private CardEntry GetOrCreateEntry(string cardObjectName)

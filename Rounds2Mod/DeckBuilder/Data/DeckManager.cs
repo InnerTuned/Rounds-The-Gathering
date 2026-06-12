@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnboundLib;
 using UnboundLib.Utils;
+using DeckBuilder.GameIntegration;
 
 namespace DeckBuilder.Data
 {
@@ -251,6 +252,12 @@ namespace DeckBuilder.Data
                 if (ci == null)
                 {
                     RTGLog.Warn($"BuildCardPool: unknown card '{entry.cardObjectName}', skipping.");
+                    continue;
+                }
+
+                if (ModCardVisibilityBridge.IsHidden(ci))
+                {
+                    RTGLog.Line($"BuildCardPool: excluded hidden card '{ci.cardName}', skipping.");
                     continue;
                 }
 

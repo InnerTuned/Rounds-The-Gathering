@@ -2,11 +2,13 @@ using System.IO;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using UnityEngine;
 using ShieldsMod.Cards;
 using ShieldsMod.Lifesteal;
 using ShieldsMod.Poison;
 using ShieldsMod.Shield;
 using ShieldsMod.Stun;
+using ShieldsMod.UI;
 
 namespace ShieldsMod;
 
@@ -37,12 +39,17 @@ public class Plugin : BaseUnityPlugin
         gameObject.AddComponent<StunResistanceManager>();
         gameObject.AddComponent<LifestealResistanceManager>();
 
+        var uiRoot = new GameObject("ShieldsMod_UI");
+        DontDestroyOnLoad(uiRoot);
+        uiRoot.AddComponent<ResistanceSelectModalUI>();
+
         SLog.Line($"Plugin {MyPluginInfo.PLUGIN_GUID} loaded.");
     }
 
     private void Start()
     {
         ShieldCardRegistrar.RegisterAll();
+        UpgradeResistanceCardRegistrar.RegisterAll();
         PoisonCardRegistrar.RegisterAll();
         StunCardRegistrar.RegisterAll();
         LifestealCardRegistrar.RegisterAll();

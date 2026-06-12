@@ -4,6 +4,7 @@ using ShieldsMod.Resistance;
 
 namespace ShieldsMod.Stun;
 
+/// <summary>Rebuilds stun resistance from cards in the player's hand.</summary>
 internal static class StunHandRebuild
 {
     private static Dictionary<string, int> _levelByCardName;
@@ -18,7 +19,7 @@ internal static class StunHandRebuild
     }
 
     internal static float ComputeReductionFromHand(IEnumerable<CardInfo> cards, CardInfo exclude = null) =>
-        ResistanceTierLogic.ComputeFromHand(cards, _levelByCardName, exclude);
+        ResistanceHandLogic.ComputeReductionFromHand(cards, ResistanceType.Stun, exclude);
 
     internal static void RebuildForPlayer(int playerID)
     {

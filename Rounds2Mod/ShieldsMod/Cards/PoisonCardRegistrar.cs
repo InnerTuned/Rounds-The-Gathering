@@ -8,15 +8,25 @@ internal static class PoisonCardRegistrar
     {
         SLog.Section("PoisonCardRegistrar — RegisterAll");
 
-        CustomCard.BuildCard<PoisonResistanceLv3>(ci => PoisonCardRegistry.Lv3 = ci);
-        CustomCard.BuildCard<PoisonResistanceLv2>(ci => PoisonCardRegistry.Lv2 = ci);
-        CustomCard.BuildCard<PoisonResistanceLv1>(OnLv1Built);
+        CustomCard.BuildCard<PoisonResistanceLv3>(ci => RegisterLegacy(ci, 3));
+        CustomCard.BuildCard<PoisonResistanceLv2>(ci => RegisterLegacy(ci, 2));
+        CustomCard.BuildCard<PoisonResistanceLv1>(ci => RegisterLegacy(ci, 1));
     }
 
-    private static void OnLv1Built(CardInfo ci)
+    private static void RegisterLegacy(CardInfo ci, int level)
     {
-        PoisonCardRegistry.Lv1 = ci;
-        SLog.Line($"Registered Poison Resistance LV1: {ci.cardName}");
-        PoisonCardDeltaRegistrar.RegisterAll();
+        switch (level)
+        {
+            case 1: PoisonCardRegistry.Lv1 = ci; break;
+            case 2: PoisonCardRegistry.Lv2 = ci; break;
+            case 3: PoisonCardRegistry.Lv3 = ci; break;
+        }
+
+        ResistanceDraftFilter.Exclude(ci.cardName);
+        ResistanceCardCatalog.RegisterLegacyTier(ci.cardName, Resistance.ResistanceType.Poison, level);
+        SLog.Line($"Registered legacy Poison Resistance LV{level}: {ci.cardName} (draft excluded)");
+
+        if (level == 1)
+            PoisonCardDeltaRegistrar.RegisterAll();
     }
 }

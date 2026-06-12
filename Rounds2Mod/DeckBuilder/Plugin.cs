@@ -46,6 +46,7 @@ public class Plugin : BaseUnityPlugin
         uiRoot.AddComponent<DeckEditorScreen>();
         uiRoot.AddComponent<DeckBuilderUiInputLock>();
         uiRoot.AddComponent<CardBarSelectorUI>();
+        uiRoot.AddComponent<CardSearchModalUI>();
 
         RTGLog.Line($"Plugin {MyPluginInfo.PLUGIN_GUID} loaded.");
     }

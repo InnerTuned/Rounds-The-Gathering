@@ -72,7 +72,7 @@ internal static class ResistanceTierLogic
         data.health = Mathf.Clamp(data.maxHealth * ratio, 1f, data.maxHealth);
     }
 
-    private static float ApplyStacking(float current, int level, out float? healthMultiplier)
+    internal static float ApplyStacking(float current, int level, out float? healthMultiplier)
     {
         healthMultiplier = null;
 
@@ -111,5 +111,5 @@ internal static class ResistanceTierLogic
         return !string.IsNullOrEmpty(name) && tierByCardName.TryGetValue(name, out level);
     }
 
-    private static float ClampReduction(float value) => Mathf.Clamp01(value);
+    internal static float ClampReduction(float value) => Mathf.Clamp01(value);
 }

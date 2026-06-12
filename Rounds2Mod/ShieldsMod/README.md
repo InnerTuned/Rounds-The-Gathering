@@ -38,41 +38,32 @@ Any tier can appear in drafts based on rarity — no lower-tier prerequisite.
 
 ---
 
-### Poison Resistance (3 tiers)
+### Upgrade Resistance
 
-Reduces poison damage received by both your health **and** your shield. The **first** resistance card sets a tier-specific value; additional cards **stack** using the rules below.
+A single draft card that opens a modal to choose which resistance type to improve: **Poison**, **Stun**, or **Lifesteal**. Each row shows your current level for that type (e.g. `Poison Resistance (LV 2)`) and an Info Overhaul-style delta preview of what the next upgrade would grant.
 
-| Card | Rarity | First resistance | When stacking |
-|------|--------|------------------|---------------|
-| Poison Resistance I | Uncommon | 25% | +5% |
-| Poison Resistance II | Rare | 50% | Upgrade to 50% if below 50%; otherwise +5% and +10% max HP |
-| Poison Resistance III | Epic | 75% | Upgrade to 75% if below 75%; otherwise +5% and +25% max HP |
+| Card | Rarity | Behavior |
+|------|--------|----------|
+| Upgrade Resistance | Uncommon | Opens resistance picker modal with `[Cancel]` / `[Select]` |
 
-Poison is detected from any source that uses ROUNDS' built-in poison bullet effect. Resistance applies to the raw damage before the shield absorbs it, so both your bubble and your HP benefit simultaneously. Any tier can appear in drafts — no lower-tier prerequisite.
+Uses Poison Resistance III artwork. **Cancel** returns you to the same draft hand without consuming the card. **Select** applies the chosen resistance upgrade and ends the pick — Upgrade Resistance **stays in your deck** and can be drafted again later.
 
----
+Legacy resistance cards and internal marker cards cannot be added to custom decks or the DeckBuilder card browser.
 
-### Stun Resistance (3 tiers)
+Upgrades follow the same tier progression as before — the Nth pick of a given type uses the Nth tier effect:
 
-Reduces stun duration received. Uses the same first-pick and stacking rules as Poison Resistance.
+| Upgrade # | Effect |
+|-----------|--------|
+| 1st | 25% resistance |
+| 2nd | Upgrade to 50% if below 50%; otherwise +5% and +10% max HP |
+| 3rd | Upgrade to 75% if below 75%; otherwise +5% and +25% max HP |
+| 4th+ | +5% resistance |
 
-| Card | Rarity | First resistance | When stacking |
-|------|--------|------------------|---------------|
-| Stun Resistance I | Uncommon | 25% | +5% |
-| Stun Resistance II | Rare | 50% | Upgrade to 50% if below 50%; otherwise +5% and +10% max HP |
-| Stun Resistance III | Epic | 75% | Upgrade to 75% if below 75%; otherwise +5% and +25% max HP |
+- **Poison** — reduces poison damage to health and shield (detected from ROUNDS' built-in poison bullet effect).
+- **Stun** — reduces stun duration received.
+- **Lifesteal** — reduces healing opponents gain from lifesteal when they damage you.
 
----
-
-### Lifesteal Resistance (3 tiers)
-
-Reduces healing your opponent gains from lifesteal when they damage you. Uses the same first-pick and stacking rules as Poison Resistance.
-
-| Card | Rarity | First resistance | When stacking |
-|------|--------|------------------|---------------|
-| Lifesteal Resistance I | Uncommon | 25% | +5% |
-| Lifesteal Resistance II | Rare | 50% | Upgrade to 50% if below 50%; otherwise +5% and +10% max HP |
-| Lifesteal Resistance III | Epic | 75% | Upgrade to 75% if below 75%; otherwise +5% and +25% max HP |
+Legacy tier cards (Poison/Stun/Lifesteal Resistance I–III) still work if already in a deck or hand, but no longer appear in drafts.
 
 ---
 
@@ -95,7 +86,7 @@ If **Info Overhaul** is also installed, the following stats appear in the pick-s
 - **Shield Health** — current / max (e.g. `74 / 110`), or `None` if you have no shield cards
 - **Poison / Stun / Lifesteal Resistance** — current reduction percentage (e.g. `25%`, or `0%` if none)
 
-The card delta preview (shown below the deck HUD during picks) shows before/after values when hovering a shield or resistance card. If **DeckBuilder**'s delete mechanic is installed, the delete-confirmation modal uses dedicated removal previews for these cards.
+The card delta preview (shown below the deck HUD during picks) shows before/after values when hovering a shield or Upgrade Resistance card. The resistance picker modal also shows per-type deltas inline and in the preview panel. If **DeckBuilder**'s delete mechanic is installed, the delete-confirmation modal uses dedicated removal previews for resistance marker cards.
 
 ---
 

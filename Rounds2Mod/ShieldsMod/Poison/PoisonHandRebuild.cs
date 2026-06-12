@@ -4,7 +4,7 @@ using ShieldsMod.Resistance;
 
 namespace ShieldsMod.Poison;
 
-/// <summary>Maps poison-resistance card names to tier levels and rebuilds reduction from the hand.</summary>
+/// <summary>Rebuilds poison resistance from cards in the player's hand.</summary>
 internal static class PoisonHandRebuild
 {
     private static Dictionary<string, int> _levelByCardName;
@@ -19,7 +19,7 @@ internal static class PoisonHandRebuild
     }
 
     internal static float ComputeReductionFromHand(IEnumerable<CardInfo> cards, CardInfo exclude = null) =>
-        ResistanceTierLogic.ComputeFromHand(cards, _levelByCardName, exclude);
+        ResistanceHandLogic.ComputeReductionFromHand(cards, ResistanceType.Poison, exclude);
 
     internal static void RebuildForPlayer(int playerID)
     {

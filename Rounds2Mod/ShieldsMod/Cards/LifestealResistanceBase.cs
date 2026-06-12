@@ -47,12 +47,11 @@ public abstract class LifestealResistanceBase : CustomCard
         if (player == null)
             return;
 
-        string cardName = cardInfo != null ? cardInfo.cardName : null;
         ResistanceCardOnAdd.Apply(
             player,
             data,
             Level,
-            cardName,
+            cardInfo,
             cards => LifestealHandRebuild.ComputeReductionFromHand(cards),
             id => LifestealResistanceManager.instance?.RebuildForPlayer(id));
 

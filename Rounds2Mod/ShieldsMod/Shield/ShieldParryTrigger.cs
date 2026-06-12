@@ -23,6 +23,11 @@ public class ShieldParryTrigger : MonoBehaviour
         _state = state;
         _block = owner.GetComponent<Block>();
 
+        // Place on "Ignore Raycast" layer (built-in layer 2) so AI line-of-sight
+        // raycasts on "Default" don't hit the shield trigger — without this, bot AI
+        // sees the collider as an obstacle and refuses to shoot at shielded players.
+        gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
+
         _trigger = gameObject.AddComponent<CircleCollider2D>();
         _trigger.isTrigger = true;
         _trigger.radius = radius;

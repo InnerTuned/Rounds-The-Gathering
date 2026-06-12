@@ -47,12 +47,11 @@ public abstract class PoisonResistanceBase : CustomCard
         if (player == null)
             return;
 
-        string cardName = cardInfo != null ? cardInfo.cardName : null;
         ResistanceCardOnAdd.Apply(
             player,
             data,
             Level,
-            cardName,
+            cardInfo,
             cards => PoisonHandRebuild.ComputeReductionFromHand(cards),
             id => PoisonResistanceManager.instance?.RebuildForPlayer(id));
 

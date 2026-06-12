@@ -47,12 +47,11 @@ public abstract class StunResistanceBase : CustomCard
         if (player == null)
             return;
 
-        string cardName = cardInfo != null ? cardInfo.cardName : null;
         ResistanceCardOnAdd.Apply(
             player,
             data,
             Level,
-            cardName,
+            cardInfo,
             cards => StunHandRebuild.ComputeReductionFromHand(cards),
             id => StunResistanceManager.instance?.RebuildForPlayer(id));
 

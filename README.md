@@ -13,6 +13,7 @@ One install, four mods — a complete pick-phase overhaul for ROUNDS.
 - **Deck Manager UI** with pagination, search, and a "My Deck" view
 - **Swap card** to delete a card from your hand during picks — with a confirmation modal and stat-change preview
 - **Copycat card** to duplicate any card from any player's hand
+- **Rare Search / Legendary Search** cards to tutor cards from your remaining deck
 - Tiered card unlock API for other mods
 
 ### Keybound Mod

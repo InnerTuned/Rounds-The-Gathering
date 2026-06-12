@@ -91,12 +91,29 @@ Pick Swap from the draft table to delete a card from your hand and draw a replac
 
 Swap replaces the old always-on card-bar delete buttons during picks. Hand deletion is now a card you deliberately put in your deck.
 
+### Rare Search (Rare)
+
+Search your remaining runtime deck for a **Rare or lower** card and add it directly to your hand.
+
+- **Pool:** unpicked cards in your deck that meet unlock prerequisites
+- **Rarity cap:** Rare or lower (uses RarityLib relative rarity)
+- **Sort:** alphabetical
+- **Confirm:** adds the chosen card, consumes it from your deck, consumes Rare Search, and ends your pick
+- **Cancel:** returns to the same draft hand without consuming Rare Search
+
+### Legendary Search (Legendary)
+
+Same flow as Rare Search, but with **no rarity cap** — any remaining deck card that is unlocked can be tutored.
+
+Both search cards use a shared in-game modal with card icons (same visuals as Deck Manager), search bar, pagination (15 per page), and Info Overhaul stat previews on hover/select.
+
 ### Info Overhaul integration
 
 If **Info Overhaul** is installed, the selector shows stat deltas while you hover card bar slots:
 
 - **Copycat** — add deltas (`If copying X:`)
 - **Swap** — removal deltas (`If removing X:`)
+- **Rare Search / Legendary Search** — add deltas (`If adding X:`)
 
 ### Debugging
 
@@ -104,6 +121,7 @@ BepInEx logs are tagged for easy filtering during testing:
 
 - `[DeckBuilder:Copycat]`
 - `[DeckBuilder:Swap]`
+- `[DeckBuilder:Search]`
 
 ---
 

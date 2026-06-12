@@ -4,6 +4,7 @@ using ShieldsMod.Resistance;
 
 namespace ShieldsMod.Lifesteal;
 
+/// <summary>Rebuilds lifesteal resistance from cards in the player's hand.</summary>
 internal static class LifestealHandRebuild
 {
     private static Dictionary<string, int> _levelByCardName;
@@ -18,7 +19,7 @@ internal static class LifestealHandRebuild
     }
 
     internal static float ComputeReductionFromHand(IEnumerable<CardInfo> cards, CardInfo exclude = null) =>
-        ResistanceTierLogic.ComputeFromHand(cards, _levelByCardName, exclude);
+        ResistanceHandLogic.ComputeReductionFromHand(cards, ResistanceType.Lifesteal, exclude);
 
     internal static void RebuildForPlayer(int playerID)
     {
