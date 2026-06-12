@@ -1,3 +1,4 @@
+using ShieldsMod.Integration;
 using UnityEngine;
 
 namespace ShieldsMod.Shield;
@@ -51,7 +52,9 @@ public class ShieldVisual : MonoBehaviour
         }
 
         _sprite.enabled = true;
-        _sprite.color = _state.GetBubbleColor();
+        _sprite.color = KeyboundInvisibilityBridge.IsPlayerInvisible(_player)
+            ? KeyboundInvisibilityBridge.InvisibleColor
+            : _state.GetBubbleColor();
 
         float bodyRadius = GetBodyRadius(_player);
         float diameter = bodyRadius * 2f * SizeMultiplier;

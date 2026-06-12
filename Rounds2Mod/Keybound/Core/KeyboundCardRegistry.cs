@@ -10,7 +10,8 @@ internal static class KeyboundCardRegistry
     internal static void Register(KeyboundEffectDef def)
     {
         Effects[def.CardName] = def;
-        KLog.Line($"Registered keybound effect '{def.CardName}' (delay={def.InitialDelay}s, cd={def.Cooldown}s).");
+        string duration = def.Duration > 0f ? $", dur={def.Duration}s" : "";
+        KLog.Line($"Registered keybound effect '{def.CardName}' (delay={def.InitialDelay}s{duration}, cd={def.Cooldown}s).");
     }
 
     internal static bool IsKeybound(string cardName) =>
@@ -22,5 +23,6 @@ internal static class KeyboundCardRegistry
     internal static void RegisterBuiltInEffects()
     {
         Register(TeleportEffect.Def);
+        Register(InvisibilityEffect.Def);
     }
 }

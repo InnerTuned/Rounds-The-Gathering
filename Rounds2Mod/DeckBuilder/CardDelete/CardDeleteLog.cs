@@ -6,17 +6,14 @@ internal static class CardDeleteLog
 
     public static void Section(string title)
     {
-        Plugin.Logger.LogInfo(Sep);
-        Plugin.Logger.LogInfo($"[DeckBuilder:Delete] {title}");
-        Plugin.Logger.LogInfo(Sep);
+        // Plugin.Logger.LogInfo(Sep);
+        // Plugin.Logger.LogInfo($"[DeckBuilder:Delete] {title}");
+        // Plugin.Logger.LogInfo(Sep);
     }
 
-    public static void Line(string message) =>
-        Plugin.Logger.LogInfo($"[DeckBuilder:Delete] {message}");
+    public static void Line(string message) { /* Plugin.Logger.LogInfo($"[DeckBuilder:Delete] {message}"); */ }
 
-    public static void Warn(string message) =>
-        Plugin.Logger.LogWarning($"[DeckBuilder:Delete] {message}");
+    public static void Warn(string message) { /* Plugin.Logger.LogWarning($"[DeckBuilder:Delete] {message}"); */ }
 
-    public static void Error(string message) =>
-        Plugin.Logger.LogError($"[DeckBuilder:Delete] {message}");
+    public static void Error(string message) { /* Plugin.Logger.LogError($"[DeckBuilder:Delete] {message}"); */ }
 }

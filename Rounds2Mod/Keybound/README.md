@@ -20,6 +20,12 @@ Part of the **Rounds: The Gathering** mod pack.
 - Becomes available **10s** after the round starts.
 - **15s** cooldown after each use.
 
+### Invisibility [Rare]
+- Press your bound key to turn ghostly white at **20%** opacity (player and shield).
+- While active, bullets pass through you and your shield without collision or damage.
+- Becomes available **10s** after the round starts.
+- Lasts **7s**. **20s** cooldown after it ends.
+
 ## Debugging
 
 Filter logs with `[Keybound]`.

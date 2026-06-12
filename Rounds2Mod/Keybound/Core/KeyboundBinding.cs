@@ -39,4 +39,11 @@ internal sealed class KeyboundBinding
         LockoutDuration = Def.Cooldown;
         ReadyAt = Time.time + Def.Cooldown;
     }
+
+    public void ArmAfterActivate()
+    {
+        float total = Mathf.Max(0f, Def.Duration) + Def.Cooldown;
+        LockoutDuration = total;
+        ReadyAt = Time.time + total;
+    }
 }

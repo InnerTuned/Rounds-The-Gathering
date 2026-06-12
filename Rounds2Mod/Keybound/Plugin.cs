@@ -4,6 +4,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using Keybound.Cards;
 using Keybound.Core;
+using Keybound.Effects;
 using Keybound.UI;
 using UnityEngine;
 
@@ -31,6 +32,7 @@ public class Plugin : BaseUnityPlugin
         new Harmony(MyPluginInfo.PLUGIN_GUID).PatchAll();
 
         gameObject.AddComponent<EffectStackManager>();
+        gameObject.AddComponent<InvisibilityManager>();
 
         var uiRoot = new GameObject("KB_UIRoot");
         DontDestroyOnLoad(uiRoot);

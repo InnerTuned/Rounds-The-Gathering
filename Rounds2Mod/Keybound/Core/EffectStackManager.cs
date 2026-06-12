@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
+using Keybound.Effects;
 using Keybound.UI;
 using UnityEngine;
 
@@ -79,7 +80,10 @@ public class EffectStackManager : MonoBehaviour
     {
         bool active = IsGameActive();
         if (_wasGameActive && !active)
+        {
+            InvisibilityManager.instance?.ClearAll();
             ClearAll();
+        }
         _wasGameActive = active;
 
         if (!active) return;
@@ -93,7 +97,12 @@ public class EffectStackManager : MonoBehaviour
             if (!InputCompat.GetKeyDown(binding.Key)) continue;
 
             if (binding.Def.Activate(local))
-                binding.ArmCooldown();
+            {
+                if (binding.Def.Duration > 0f)
+                    binding.ArmAfterActivate();
+                else
+                    binding.ArmCooldown();
+            }
         }
 
         EffectStackOverlay.instance?.RefreshAll();

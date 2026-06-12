@@ -20,6 +20,7 @@ One install, four mods — a complete pick-phase overhaul for ROUNDS.
 - Utility cards with **[Keybound]** effects
 - Bind a key during the draft, then activate the effect from the **Effect Stack** (bottom-right)
 - **Teleport** card: teleport to your cursor on a cooldown
+- **Invisibility** card: turn ghostly white at 20% opacity; bullets pass through you and your shield for 7s
 
 ### ShieldsMod
 - Persistent shield bubble (unlocked via **Upgrade Shield Health I**)
@@ -88,7 +89,7 @@ For a Thunderstore ZIP:
 | File | Role |
 |------|------|
 | `DeckBuilder.dll` | Deck builder, custom cards (Swap/Copycat), prerequisites |
-| `Keybound.dll` | Keybound effects, Effect Stack UI, Teleport card |
+| `Keybound.dll` | Keybound effects, Effect Stack UI, Teleport and Invisibility cards |
 | `ShieldsMod.dll` | Shields and resistance cards |
 | `InfoOverhaul.dll` | Stats popup, draft delta preview, delete stat preview |
 | `assets/` | Mod card artwork (PNG) |

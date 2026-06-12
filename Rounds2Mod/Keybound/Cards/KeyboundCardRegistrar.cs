@@ -14,5 +14,8 @@ internal static class KeyboundCardRegistrar
 
         CustomCard.BuildCard<TeleportCard>(ci =>
             KLog.Line($"Registered keybound card: {ci.cardName}"));
+
+        CustomCard.BuildCard<InvisibilityCard>(ci =>
+            KLog.Line($"Registered keybound card: {ci.cardName}"));
     }
 }
