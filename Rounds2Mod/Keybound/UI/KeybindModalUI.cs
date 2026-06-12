@@ -11,7 +11,6 @@ public class KeybindModalUI : MonoBehaviour
 {
     public static KeybindModalUI instance;
 
-    // Unity KeyCode integer values (UnityEngine.CoreModule) — avoid compile-time KeyCode type.
     private const int KeyA = 97;
     private const int KeyZ = 122;
     private const int KeyAlpha0 = 48;
@@ -19,20 +18,29 @@ public class KeybindModalUI : MonoBehaviour
 
     private Canvas _canvas;
     private TextMeshProUGUI _messageText;
-    private Button _bindButton;
     private Image _bindImage;
     private TextMeshProUGUI _bindLabel;
+
+    private RectTransform _cancelRect;
+    private RectTransform _bindRect;
+    private Camera _uiCamera;
 
     private Action<int> _onConfirm;
     private Action _onCancel;
     private int _pickerID;
     private CardInfo _card;
     private int? _pendingKey;
+    private int _ignoreInputFrames;
+    private bool _pressStartedInModal;
 
     private static readonly Color PanelBg = new Color(0.04f, 0.06f, 0.12f, 1f);
     private static readonly Color CancelBg = new Color(0.40f, 0.10f, 0.10f, 0.95f);
+    private static readonly Color CancelHoverBg = new Color(0.55f, 0.15f, 0.15f, 0.95f);
     private static readonly Color BindReadyBg = new Color(0.10f, 0.45f, 0.12f, 0.95f);
+    private static readonly Color BindHoverBg = new Color(0.15f, 0.60f, 0.18f, 0.95f);
     private static readonly Color BindGrayBg = new Color(0.18f, 0.18f, 0.18f, 0.55f);
+
+    private Image _cancelImage;
 
     private void Awake()
     {
@@ -65,31 +73,40 @@ public class KeybindModalUI : MonoBehaviour
         msgRt.anchorMax = new Vector2(0.95f, 0.75f);
         msgRt.offsetMin = msgRt.offsetMax = Vector2.zero;
 
-        var cancelBtn = UIHelper.CreateButton(panel, "CancelBtn", "[Cancel]",
-            new Vector2(0.08f, 0.10f), new Vector2(0.42f, 0.28f),
-            fontSize: 20, bgColor: CancelBg);
-        cancelBtn.onClick.AddListener(OnCancelClicked);
+        // Cancel — visual-only, no onClick listener. Polled from Update().
+        var cancelGo = new GameObject("CancelBtn");
+        cancelGo.transform.SetParent(panel, false);
+        _cancelRect = cancelGo.AddComponent<RectTransform>();
+        _cancelRect.anchorMin = new Vector2(0.08f, 0.10f);
+        _cancelRect.anchorMax = new Vector2(0.42f, 0.28f);
+        _cancelRect.offsetMin = _cancelRect.offsetMax = Vector2.zero;
+        _cancelImage = cancelGo.AddComponent<Image>();
+        _cancelImage.color = CancelBg;
+        var cancelLabel = new GameObject("Label");
+        cancelLabel.transform.SetParent(cancelGo.transform, false);
+        var clRt = cancelLabel.AddComponent<RectTransform>();
+        clRt.anchorMin = Vector2.zero; clRt.anchorMax = Vector2.one;
+        clRt.offsetMin = clRt.offsetMax = Vector2.zero;
+        var clTmp = cancelLabel.AddComponent<TextMeshProUGUI>();
+        clTmp.text = "[Cancel]";
+        clTmp.fontSize = 20;
+        clTmp.alignment = TextAlignmentOptions.Center;
+        clTmp.color = Color.white;
 
+        // Bind — visual-only, no onClick listener. Polled from Update().
         var bindGo = new GameObject("BindBtn");
         bindGo.transform.SetParent(panel, false);
-        var bindRt = bindGo.AddComponent<RectTransform>();
-        bindRt.anchorMin = new Vector2(0.58f, 0.10f);
-        bindRt.anchorMax = new Vector2(0.92f, 0.28f);
-        bindRt.offsetMin = bindRt.offsetMax = Vector2.zero;
-
+        _bindRect = bindGo.AddComponent<RectTransform>();
+        _bindRect.anchorMin = new Vector2(0.58f, 0.10f);
+        _bindRect.anchorMax = new Vector2(0.92f, 0.28f);
+        _bindRect.offsetMin = _bindRect.offsetMax = Vector2.zero;
         _bindImage = bindGo.AddComponent<Image>();
         _bindImage.color = BindGrayBg;
-        _bindButton = bindGo.AddComponent<Button>();
-        _bindButton.targetGraphic = _bindImage;
-        _bindButton.interactable = false;
-        _bindButton.onClick.AddListener(OnBindClicked);
-
         var bindLabelGo = new GameObject("Label");
         bindLabelGo.transform.SetParent(bindGo.transform, false);
-        var bindLabelRt = bindLabelGo.AddComponent<RectTransform>();
-        bindLabelRt.anchorMin = Vector2.zero;
-        bindLabelRt.anchorMax = Vector2.one;
-        bindLabelRt.offsetMin = bindLabelRt.offsetMax = Vector2.zero;
+        var blRt = bindLabelGo.AddComponent<RectTransform>();
+        blRt.anchorMin = Vector2.zero; blRt.anchorMax = Vector2.one;
+        blRt.offsetMin = blRt.offsetMax = Vector2.zero;
         _bindLabel = bindLabelGo.AddComponent<TextMeshProUGUI>();
         _bindLabel.text = "[Bind Key]";
         _bindLabel.fontSize = 20;
@@ -106,8 +123,12 @@ public class KeybindModalUI : MonoBehaviour
         _pendingKey = null;
 
         _messageText.text = $"Press a key to bind <b>{card.cardName}</b>.";
-        RefreshBindButton();
+        _ignoreInputFrames = 3;
+        _pressStartedInModal = false;
+        RefreshBindVisual();
+
         _canvas.gameObject.SetActive(true);
+        _uiCamera = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
         KLog.Line($"Keybind modal shown for '{card.cardName}' (picker={pickerID}).");
     }
 
@@ -124,12 +145,64 @@ public class KeybindModalUI : MonoBehaviour
     {
         if (!_canvas.gameObject.activeSelf || _card == null) return;
 
-        if (InputCompat.GetKeyDown(InputCompat.KeyEscape))
+        if (_ignoreInputFrames > 0)
         {
-            OnCancelClicked();
+            _ignoreInputFrames--;
             return;
         }
 
+        // Keyboard: Escape cancels
+        if (InputCompat.GetKeyDown(InputCompat.KeyEscape))
+        {
+            DoCancel("escape");
+            return;
+        }
+
+        // Mouse: poll the click ourselves instead of relying on the EventSystem.
+        // A click is only honored if BOTH its press and release happen while the
+        // modal is open — this rejects the carried-over release from the click
+        // that opened the modal (whose press happened before the modal existed).
+        if (InputCompat.GetMouseButtonDown(0))
+        {
+            _pressStartedInModal = true;
+            KLog.Line("Mouse down observed — pressStartedInModal=true.");
+        }
+
+        if (InputCompat.GetMouseButtonUp(0))
+        {
+            Vector3 mousePos = InputCompat.MousePosition;
+            bool overCancel = RectTransformUtility.RectangleContainsScreenPoint(_cancelRect, mousePos, _uiCamera);
+            bool overBind = _pendingKey.HasValue &&
+                RectTransformUtility.RectangleContainsScreenPoint(_bindRect, mousePos, _uiCamera);
+
+            if (!_pressStartedInModal)
+            {
+                if (overCancel || overBind)
+                    KLog.Line($"Mouse up IGNORED (pressStartedInModal=false). overCancel={overCancel}, overBind={overBind}");
+            }
+            else
+            {
+                _pressStartedInModal = false;
+                KLog.Line($"Mouse up accepted. overCancel={overCancel}, overBind={overBind}");
+
+                if (overCancel)
+                {
+                    DoCancel("mouse");
+                    return;
+                }
+
+                if (overBind)
+                {
+                    DoBind();
+                    return;
+                }
+            }
+        }
+
+        // Hover feedback
+        UpdateHoverVisuals();
+
+        // Key binding detection
         foreach (int key in GetBindableKeys())
         {
             if (!InputCompat.GetKeyDown(key)) continue;
@@ -137,39 +210,53 @@ public class KeybindModalUI : MonoBehaviour
             {
                 _messageText.text = $"<color=#ff8888>{FormatKey(key)} is already bound.</color>";
                 _pendingKey = null;
-                RefreshBindButton();
+                RefreshBindVisual();
                 return;
             }
 
             _pendingKey = key;
             _messageText.text = $"Bind <b>{_card.cardName}</b> to <b>{FormatKey(key)}</b>?";
-            RefreshBindButton();
+            RefreshBindVisual();
             return;
         }
     }
 
-    private void RefreshBindButton()
+    private void DoCancel(string source)
     {
-        bool ready = _pendingKey.HasValue;
-        _bindButton.interactable = ready;
-        _bindImage.color = ready ? BindReadyBg : BindGrayBg;
-        _bindLabel.color = ready ? Color.white : new Color(0.45f, 0.45f, 0.45f);
+        KLog.Line($"Keybind cancel accepted (source={source}).");
+        var cb = _onCancel;
+        Hide();
+        cb?.Invoke();
     }
 
-    private void OnBindClicked()
+    private void DoBind()
     {
         if (!_pendingKey.HasValue) return;
         int key = _pendingKey.Value;
+        KLog.Line($"Keybind confirmed: key={FormatKey(key)}.");
         var cb = _onConfirm;
         Hide();
         cb?.Invoke(key);
     }
 
-    private void OnCancelClicked()
+    private void UpdateHoverVisuals()
     {
-        var cb = _onCancel;
-        Hide();
-        cb?.Invoke();
+        Vector3 mousePos = InputCompat.MousePosition;
+        bool overCancel = RectTransformUtility.RectangleContainsScreenPoint(_cancelRect, mousePos, _uiCamera);
+        _cancelImage.color = overCancel ? CancelHoverBg : CancelBg;
+
+        if (_pendingKey.HasValue)
+        {
+            bool overBind = RectTransformUtility.RectangleContainsScreenPoint(_bindRect, mousePos, _uiCamera);
+            _bindImage.color = overBind ? BindHoverBg : BindReadyBg;
+        }
+    }
+
+    private void RefreshBindVisual()
+    {
+        bool ready = _pendingKey.HasValue;
+        _bindImage.color = ready ? BindReadyBg : BindGrayBg;
+        _bindLabel.color = ready ? Color.white : new Color(0.45f, 0.45f, 0.45f);
     }
 
     private static int[] GetBindableKeys()

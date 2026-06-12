@@ -1,9 +1,10 @@
-namespace DeckBuilder.Cards;
+namespace DeckBuilder.GameIntegration;
 
-internal static class SearchCardLog
+/// <summary>Enabled logging for the unified two-step card flow (debugging cancel/confirm paths).</summary>
+internal static class TwoStepLog
 {
     private const string Sep = "=====================";
-    private const string Tag = "[DeckBuilder:Search]";
+    private const string Tag = "[DeckBuilder:TwoStep]";
 
     public static void Section(string title)
     {

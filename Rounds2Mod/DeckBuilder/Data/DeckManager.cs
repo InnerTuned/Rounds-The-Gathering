@@ -261,7 +261,7 @@ namespace DeckBuilder.Data
                     continue;
                 }
 
-                int maxCount = RarityDeckLimits.MaxCountFor(ci);
+                int maxCount = DeckCardRules.MaxCountFor(ci);
                 int clampedCount = Mathf.Clamp(entry.count, 0, maxCount);
                 for (int i = 0; i < clampedCount; i++)
                     result.Add(ci);
@@ -271,7 +271,7 @@ namespace DeckBuilder.Data
             return result.ToArray();
         }
 
-        public static int MaxCountForCard(CardInfo card) => RarityDeckLimits.MaxCountFor(card);
+        public static int MaxCountForCard(CardInfo card) => DeckCardRules.MaxCountFor(card);
 
         /// <summary>Rebuilds all RuntimeDecks from each player's active deck at game start.</summary>
         public static void InitRuntimeDecks()

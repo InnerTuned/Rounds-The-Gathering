@@ -17,11 +17,20 @@ internal sealed class KeyboundBinding
     /// <summary>Duration of the current lockout window (for overlay progress).</summary>
     public float LockoutDuration;
 
-    public bool IsReady() => Time.time >= ReadyAt;
+    public bool IsReady()
+    {
+        if (EffectStackManager.instance != null && EffectStackManager.instance.AreTimersPaused)
+            return true;
+
+        return Time.time >= ReadyAt;
+    }
 
     /// <summary>0 = ready, 1 = fully locked out.</summary>
     public float CooldownFill()
     {
+        if (EffectStackManager.instance != null && EffectStackManager.instance.AreTimersPaused)
+            return 0f;
+
         if (IsReady()) return 0f;
         float remaining = ReadyAt - Time.time;
         if (LockoutDuration <= 0f) return 1f;
@@ -46,4 +55,6 @@ internal sealed class KeyboundBinding
         LockoutDuration = total;
         ReadyAt = Time.time + total;
     }
+
+    public void ResetForNewRound() => ArmInitialDelay();
 }

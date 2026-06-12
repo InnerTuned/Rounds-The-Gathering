@@ -94,7 +94,7 @@ public class EffectStackOverlay : MonoBehaviour
     private void Update()
     {
         if (_canvas == null || !_canvas.gameObject.activeSelf) return;
-        if (!IsGameActive())
+        if (!IsGameActive() || IsPickPhaseActive())
             HideAll();
     }
 
@@ -164,6 +164,9 @@ public class EffectStackOverlay : MonoBehaviour
             return false;
         return true;
     }
+
+    private static bool IsPickPhaseActive() =>
+        CardChoice.instance != null && CardChoice.instance.IsPicking;
 
     // ── Per-player horizontal row ─────────────────────────────────────────────
 

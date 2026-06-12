@@ -13,11 +13,68 @@ internal static class DeckBuilderBridge
     private static MethodInfo _getRemaining;
     private static Type _networkSyncType;
     private static MethodInfo _broadcastRemaining;
+    private static Type _twoStepType;
+    private static MethodInfo _registerExternal;
+    private static MethodInfo _completeExternal;
     private static bool _resolved;
 
     internal static bool IsAvailable
     {
         get { Resolve(); return _consumeCard != null; }
+    }
+
+    /// <summary>True if DeckBuilder's two-step flow engine is present.</summary>
+    internal static bool TwoStepAvailable
+    {
+        get { Resolve(); return _registerExternal != null && _completeExternal != null; }
+    }
+
+    /// <summary>
+    /// Registers a keybound-card handler with DeckBuilder's TwoStepCardFlow so the
+    /// shared ApplyStats patch launches the keybind flow for any keybound card.
+    /// </summary>
+    internal static bool RegisterTwoStep(Func<CardInfo, bool> predicate, Action<int, CardInfo> starter)
+    {
+        Resolve();
+        if (_registerExternal == null)
+        {
+            KLog.Warn("DeckBuilder TwoStepCardFlow not available — keybound pick interception disabled.");
+            return false;
+        }
+
+        try
+        {
+            _registerExternal.Invoke(null, new object[] { predicate, starter });
+            KLog.Line("Registered keybound two-step handler with DeckBuilder.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            KLog.Warn($"RegisterTwoStep failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>Reports a keybind flow's outcome to DeckBuilder's TwoStepCardFlow resolver.</summary>
+    internal static void CompleteTwoStep(int pickerID, CardInfo card, int outcomeCode)
+    {
+        Resolve();
+        if (_completeExternal == null)
+        {
+            KLog.Warn("DeckBuilder TwoStepCardFlow.CompleteExternal not available.");
+            return;
+        }
+
+        try
+        {
+            KLog.Line($"CompleteTwoStep invoking DeckBuilder: picker={pickerID}, card='{card?.cardName ?? "null"}', outcomeCode={outcomeCode}");
+            _completeExternal.Invoke(null, new object[] { pickerID, card, outcomeCode });
+            KLog.Line("CompleteTwoStep invoke returned.");
+        }
+        catch (Exception ex)
+        {
+            KLog.Warn($"CompleteTwoStep failed: {ex.Message}");
+        }
     }
 
     internal static void ConsumeCard(int playerID, CardInfo card)
@@ -82,6 +139,17 @@ internal static class DeckBuilderBridge
             _broadcastRemaining = _networkSyncType?.GetMethod("BroadcastRemainingCount",
                 BindingFlags.Public | BindingFlags.Static,
                 null, new[] { typeof(int), typeof(int) }, null);
+
+            _twoStepType = asm.GetType("DeckBuilder.GameIntegration.TwoStepCardFlow");
+            if (_twoStepType != null)
+            {
+                _registerExternal = _twoStepType.GetMethod("RegisterExternal",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null, new[] { typeof(object), typeof(object) }, null);
+                _completeExternal = _twoStepType.GetMethod("CompleteExternal",
+                    BindingFlags.Public | BindingFlags.Static,
+                    null, new[] { typeof(int), typeof(CardInfo), typeof(int) }, null);
+            }
         }
         catch (Exception ex)
         {

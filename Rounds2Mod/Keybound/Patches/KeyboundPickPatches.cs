@@ -1,62 +1,59 @@
-using HarmonyLib;
+using System;
 using Keybound.Compat;
 using Keybound.Core;
 using Keybound.UI;
-using UnityEngine;
 
 namespace Keybound.Patches;
 
-[HarmonyPatch]
+/// <summary>
+/// Handler for the keybound-card two-step flow. Registers a predicate-based handler with
+/// DeckBuilder's TwoStepCardFlow at startup; the shared ApplyStats/RPCA_DoEndPick/AddCard
+/// patches (owned by DeckBuilder) drive interception. Completion is reported back through
+/// <see cref="DeckBuilderBridge"/>.
+/// </summary>
 internal static class KeyboundPickPatches
 {
-    internal static bool IsBindFlowActive;
+    // Outcome codes mirror DeckBuilder.GameIntegration.TwoStepOutcome.
+    private const int OutcomeCancelled = 0;
+    private const int OutcomeAccepted = 1;
 
     private static int _pickerID = -1;
     private static CardInfo _pendingCard;
 
-    [HarmonyPatch(typeof(ApplyCardStats), "ApplyStats")]
-    [HarmonyPrefix]
-    static bool ApplyStats_Prefix(ApplyCardStats __instance)
+    /// <summary>True when launched as a nested step from the search modal (callbacks owned by SearchCardPatches).</summary>
+    private static bool _fromSearch;
+    private static Action<int> _searchOnBound;
+    private static Action _searchOnCancel;
+
+    /// <summary>Registers keybound cards as two-step cards with DeckBuilder. Call once at startup.</summary>
+    internal static void RegisterFlow()
     {
-        if (CardChoice.instance == null || !CardChoice.instance.IsPicking) return true;
+        Func<CardInfo, bool> predicate = c => c != null && KeyboundCardRegistry.IsKeybound(c.cardName);
+        Action<int, CardInfo> starter = (pickerID, card) => StartBindFlow(pickerID, card, fromSearch: false);
 
-        CardInfo card = __instance.GetComponentInParent<CardInfo>();
-        if (card == null || !KeyboundCardRegistry.IsKeybound(card.cardName)) return true;
-
-        int pickerID = CardChoice.instance.pickrID;
-        if (!IsLocalPicker(pickerID)) return true;
-
-        KLog.Section($"Keybind flow started — '{card.cardName}'");
-        StartBindFlow(pickerID, card);
-        return false;
+        if (DeckBuilderBridge.RegisterTwoStep(predicate, starter))
+            KLog.Line("Keybound two-step flow registered.");
     }
 
-    [HarmonyPatch(typeof(CardChoice), "RPCA_DoEndPick")]
-    [HarmonyPrefix]
-    static bool RPCA_DoEndPick_Prefix()
+    /// <summary>
+    /// Nested keybind step after the search modal picks a keybound card. The search flow
+    /// defers consumption until onBound fires; onCancel restores the draft hand.
+    /// </summary>
+    public static void StartKeybindFromSearch(int pickerID, CardInfo card, Action<int> onBound, Action onCancel)
     {
-        if (!IsBindFlowActive) return true;
-        KLog.Line("RPCA_DoEndPick suppressed (keybind modal open).");
-        return false;
+        KLog.Section($"Keybind search sub-flow — '{card?.cardName}'");
+        _searchOnBound = onBound;
+        _searchOnCancel = onCancel;
+        StartBindFlow(pickerID, card, fromSearch: true);
     }
 
-    [HarmonyPatch(typeof(CardBarHandler), "AddCard")]
-    [HarmonyPrefix]
-    static bool CardBarHandler_AddCard_Prefix(CardInfo card)
-    {
-        if (card == null) return true;
-        if (!KeyboundCardRegistry.IsKeybound(card.cardName)) return true;
-
-        KLog.Line($"Blocked card-bar add for keybound card '{card.cardName}'.");
-        return false;
-    }
-
-    private static void StartBindFlow(int pickerID, CardInfo card)
+    private static void StartBindFlow(int pickerID, CardInfo card, bool fromSearch)
     {
         _pickerID = pickerID;
         _pendingCard = card;
-        IsBindFlowActive = true;
+        _fromSearch = fromSearch;
 
+        KLog.Line($"StartBindFlow: picker={pickerID}, card='{card?.cardName}', fromSearch={fromSearch}");
         KeybindModalUI.instance?.Show(pickerID, card,
             onConfirm: OnConfirm,
             onCancel: OnCancel);
@@ -65,37 +62,49 @@ internal static class KeyboundPickPatches
     private static void OnConfirm(int key)
     {
         KLog.Section($"Keybind confirmed — {_pendingCard?.cardName} -> {key}");
-        IsBindFlowActive = false;
 
         if (_pendingCard != null)
-        {
             EffectStackManager.instance?.AddBinding(_pickerID, _pendingCard, key);
-            DeckBuilderBridge.ConsumeCard(_pickerID, _pendingCard);
-        }
 
-        PickPhaseHelper.EndPickPhase();
-        _pendingCard = null;
+        if (_fromSearch)
+        {
+            KLog.Line("Search sub-flow confirm — delegating finalize to SearchCardPatches.");
+            var cb = _searchOnBound;
+            ClearSearchCallbacks();
+            _pendingCard = null;
+            cb?.Invoke(key);
+        }
+        else
+        {
+            DeckBuilderBridge.CompleteTwoStep(_pickerID, _pendingCard, OutcomeAccepted);
+            _pendingCard = null;
+        }
     }
 
     private static void OnCancel()
     {
         KLog.Section("Keybind cancelled");
-        IsBindFlowActive = false;
-        PickPhaseHelper.RestorePickState(_pickerID, _pendingCard);
-        _pendingCard = null;
+
+        if (_fromSearch)
+        {
+            KLog.Line("Search sub-flow cancel — delegating restore to SearchCardPatches.");
+            var cb = _searchOnCancel;
+            ClearSearchCallbacks();
+            _pendingCard = null;
+            cb?.Invoke();
+        }
+        else
+        {
+            KLog.Line("Direct pick cancel — reporting Cancelled to TwoStepCardFlow.");
+            DeckBuilderBridge.CompleteTwoStep(_pickerID, _pendingCard, OutcomeCancelled);
+            _pendingCard = null;
+        }
     }
 
-    private static bool IsLocalPicker(int pickerID)
+    private static void ClearSearchCallbacks()
     {
-        Player picker = PlayerManager.instance?.players?.Find(p => p.playerID == pickerID);
-        if (picker == null) return false;
-
-        var viewField = AccessTools.Field(typeof(CharacterData), "view");
-        object view = viewField?.GetValue(picker.data);
-        if (view == null) return true;
-
-        var isMine = AccessTools.Property(view.GetType(), "IsMine");
-        if (isMine == null) return true;
-        return (bool)isMine.GetValue(view, null);
+        _fromSearch = false;
+        _searchOnBound = null;
+        _searchOnCancel = null;
     }
 }

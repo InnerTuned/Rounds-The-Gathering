@@ -14,6 +14,8 @@ internal static class InputCompat
 
     private static Type _keyCodeType;
     private static MethodInfo _getKeyDown;
+    private static MethodInfo _getMouseButtonDown;
+    private static MethodInfo _getMouseButtonUp;
     private static PropertyInfo _mousePosition;
     private static bool _resolved;
     private static bool _available;
@@ -33,6 +35,28 @@ internal static class InputCompat
             KLog.Warn($"InputCompat.GetKeyDown failed: {ex.Message}");
             return false;
         }
+    }
+
+    internal static bool GetMouseButtonDown(int button)
+    {
+        Resolve();
+        if (_getMouseButtonDown == null) return false;
+        try
+        {
+            return (bool)_getMouseButtonDown.Invoke(null, new object[] { button });
+        }
+        catch { return false; }
+    }
+
+    internal static bool GetMouseButtonUp(int button)
+    {
+        Resolve();
+        if (_getMouseButtonUp == null) return false;
+        try
+        {
+            return (bool)_getMouseButtonUp.Invoke(null, new object[] { button });
+        }
+        catch { return false; }
     }
 
     internal static Vector3 MousePosition
@@ -74,6 +98,12 @@ internal static class InputCompat
             _getKeyDown = inputType.GetMethod("GetKeyDown",
                 BindingFlags.Public | BindingFlags.Static,
                 null, new[] { _keyCodeType }, null);
+            _getMouseButtonDown = inputType.GetMethod("GetMouseButtonDown",
+                BindingFlags.Public | BindingFlags.Static,
+                null, new[] { typeof(int) }, null);
+            _getMouseButtonUp = inputType.GetMethod("GetMouseButtonUp",
+                BindingFlags.Public | BindingFlags.Static,
+                null, new[] { typeof(int) }, null);
             _mousePosition = inputType.GetProperty("mousePosition",
                 BindingFlags.Public | BindingFlags.Static);
 

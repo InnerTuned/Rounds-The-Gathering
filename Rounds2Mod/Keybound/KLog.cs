@@ -8,12 +8,12 @@ internal static class KLog
 
     internal static void Section(string title)
     {
-        // Logger?.LogInfo("=====================");
-        // Logger?.LogInfo($"[Keybound] {title}");
-        // Logger?.LogInfo("=====================");
+        Logger?.LogInfo("=====================");
+        Logger?.LogInfo($"[Keybound] {title}");
+        Logger?.LogInfo("=====================");
     }
 
-    internal static void Line(string message) { /* Logger?.LogInfo($"[Keybound] {message}"); */ }
-    internal static void Warn(string message) { /* Logger?.LogWarning($"[Keybound] {message}"); */ }
-    internal static void Error(string message) { /* Logger?.LogError($"[Keybound] {message}"); */ }
+    internal static void Line(string message) => Logger?.LogInfo($"[Keybound] {message}");
+    internal static void Warn(string message) => Logger?.LogWarning($"[Keybound] {message}");
+    internal static void Error(string message) => Logger?.LogError($"[Keybound] {message}");
 }

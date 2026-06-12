@@ -204,7 +204,10 @@ namespace DeckBuilder.GameIntegration
 
             RTGLog.Section($"DeckPickPatch — ApplyStats_Postfix card='{card.gameObject.name}' pickerID={pickerID}");
 
-            DeckManager.ConsumeCard(pickerID, card);
+            if (DeckCardRules.ShouldConsumeOnPick(card))
+                DeckManager.ConsumeCard(pickerID, card);
+            else
+                RTGLog.Line($"Cyclical/keybound card '{card.cardName}' — kept in runtime deck.");
 
             // Restore the vanilla pool so the next player starts fresh
             if (_vanillaPool != null)

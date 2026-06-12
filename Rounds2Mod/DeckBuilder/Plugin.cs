@@ -54,5 +54,11 @@ public class Plugin : BaseUnityPlugin
     private void Start()
     {
         DeckBuilderCardRegistrar.RegisterAll();
+
+        // Register two-step card flows (Copycat, Swap, Rare/Legendary Search).
+        // Keybound registers its own keybound-card flow into TwoStepCardFlow at its startup.
+        SpecialCardPatches.RegisterFlows();
+        SearchCardPatches.RegisterFlows();
+        GameIntegration.TwoStepLog.Line("Two-step flow registrations complete (Copycat, Swap, Rare Search, Legendary Search).");
     }
 }

@@ -1,91 +1,29 @@
 using System;
-using System.Reflection;
-using DeckBuilder.CardDelete;
 using DeckBuilder.Data;
 using DeckBuilder.GameIntegration;
-using DeckBuilder.Networking;
-using HarmonyLib;
 using UnboundLib;
-using UnityEngine;
 
 namespace DeckBuilder.Cards;
 
 /// <summary>
-/// Harmony patches for Rare Search and Legendary Search deck-search flows.
+/// Handler for the Rare Search and Legendary Search two-step flows. Registers itself
+/// with <see cref="TwoStepCardFlow"/>; all Harmony plumbing lives in TwoStepCardPatches.
 /// </summary>
-[HarmonyPatch]
 public static class SearchCardPatches
 {
-    public static bool IsSearchFlowActive;
-
     private static bool _capAtRare;
     private static int _pickerID = -1;
     private static CardInfo _searchCard;
+    private static CardInfo _pendingKeyboundCard;
     private static Player _pickerPlayer;
 
-    private static readonly FieldInfo s_isPlayingField =
-        AccessTools.Field(typeof(CardChoice), "isPlaying");
-    private static readonly FieldInfo s_spawnedField =
-        AccessTools.Field(typeof(CardChoice), "spawned");
-
-    [HarmonyPatch(typeof(ApplyCardStats), "ApplyStats")]
-    [HarmonyPrefix]
-    static bool ApplyStats_Prefix(ApplyCardStats __instance)
+    /// <summary>Registers the Rare/Legendary search cards as two-step cards. Call once at startup.</summary>
+    public static void RegisterFlows()
     {
-        if (CardChoice.instance == null || !CardChoice.instance.IsPicking)
-            return true;
-
-        CardInfo card = __instance.GetComponentInParent<CardInfo>();
-        if (card == null)
-            return true;
-
-        int pickerID = CardChoice.instance.pickrID;
-        if (!IsLocalPicker(pickerID))
-            return true;
-
-        if (card.cardName == RareSearchCard.CardDisplayName)
-        {
-            SearchCardLog.Section("ApplyStats intercepted — Rare Search");
-            StartFlow(pickerID, card, capAtRare: true);
-            return false;
-        }
-
-        if (card.cardName == LegendarySearchCard.CardDisplayName)
-        {
-            SearchCardLog.Section("ApplyStats intercepted — Legendary Search");
-            StartFlow(pickerID, card, capAtRare: false);
-            return false;
-        }
-
-        return true;
-    }
-
-    [HarmonyPatch(typeof(CardChoice), "RPCA_DoEndPick")]
-    [HarmonyPrefix]
-    static bool RPCA_DoEndPick_Prefix()
-    {
-        if (!IsSearchFlowActive)
-            return true;
-
-        SearchCardLog.Line("RPCA_DoEndPick suppressed (search modal open).");
-        return false;
-    }
-
-    [HarmonyPatch(typeof(CardBarHandler), "AddCard")]
-    [HarmonyPrefix]
-    static bool CardBarHandler_AddCard_Prefix(CardInfo card)
-    {
-        if (!IsSearchFlowActive || card == null)
-            return true;
-
-        if (card.cardName == RareSearchCard.CardDisplayName
-            || card.cardName == LegendarySearchCard.CardDisplayName)
-        {
-            SearchCardLog.Line($"Blocked card-bar add for '{card.cardName}'.");
-            return false;
-        }
-
-        return true;
+        TwoStepCardFlow.Register(RareSearchCard.CardDisplayName,
+            (pickerID, card) => StartFlow(pickerID, card, capAtRare: true));
+        TwoStepCardFlow.Register(LegendarySearchCard.CardDisplayName,
+            (pickerID, card) => StartFlow(pickerID, card, capAtRare: false));
     }
 
     private static void StartFlow(int pickerID, CardInfo searchCard, bool capAtRare)
@@ -101,7 +39,6 @@ public static class SearchCardPatches
             ? "Select a Rare or lower card from your deck."
             : "Select any card from your deck.";
 
-        IsSearchFlowActive = true;
         SearchCardLog.Line($"Opening search modal with {pool.Count} card(s).");
 
         CardSearchModalUI.instance?.Show(pickerID, title, message, pool,
@@ -113,10 +50,30 @@ public static class SearchCardPatches
     {
         SearchCardLog.Section("Confirm");
         SearchCardLog.Line($"selectedCard='{selectedCard?.cardName ?? "null"}'");
-        IsSearchFlowActive = false;
+
+        bool selectedIsKeybound = selectedCard != null && KeyboundCardBridge.IsKeybound(selectedCard);
 
         if (_pickerPlayer != null && selectedCard != null)
         {
+            if (selectedIsKeybound)
+            {
+                // Nested two-step: defer consumption until keybind is confirmed.
+                // Cancelling keybind restores the draft hand (Rare Search still in hand).
+                SearchCardLog.Line($"Selected card '{selectedCard.cardName}' is keybound — chaining keybind step (consumption deferred).");
+                _pendingKeyboundCard = selectedCard;
+
+                if (!KeyboundCardBridge.TryStartKeybindFromSearch(
+                        _pickerID, selectedCard,
+                        onBound: _ => FinalizeKeyboundPickFromSearch(),
+                        onCancel: OnKeybindCancelledFromSearch))
+                {
+                    SearchCardLog.Warn("Keybound unavailable — restoring draft hand.");
+                    _pendingKeyboundCard = null;
+                    TwoStepCardFlow.Complete(_pickerID, _searchCard, TwoStepOutcome.Cancelled);
+                }
+                return;
+            }
+
             try
             {
                 SpecialCardPatches.SuppressApplyStatsPostfix = true;
@@ -135,60 +92,33 @@ public static class SearchCardPatches
         }
 
         ConsumeSearchCard();
-        SearchCardLog.Line("Ending pick phase.");
-        CardDeleteManager.EndPickPhase();
-        BroadcastRemainingCount();
+        TwoStepCardFlow.Complete(_pickerID, _searchCard, TwoStepOutcome.ActionAccepted);
     }
 
     private static void OnCancel()
     {
         SearchCardLog.Section("Cancel");
-        IsSearchFlowActive = false;
+        _pendingKeyboundCard = null;
+        SearchCardLog.Line($"Reporting Cancelled to TwoStepCardFlow (picker={_pickerID}, searchCard='{_searchCard?.cardName ?? "null"}').");
+        TwoStepCardFlow.Complete(_pickerID, _searchCard, TwoStepOutcome.Cancelled);
+    }
 
-        CardChoice cc = CardChoice.instance;
-        if (cc == null)
-        {
-            SearchCardLog.Warn("CardChoice.instance is null — cannot restore state.");
-            return;
-        }
+    private static void FinalizeKeyboundPickFromSearch()
+    {
+        SearchCardLog.Section("Keybind confirmed from search — finalizing pick");
+        if (_pendingKeyboundCard != null)
+            ConsumeSelectedCardFromDeck(_pendingKeyboundCard);
+        _pendingKeyboundCard = null;
+        ConsumeSearchCard();
+        TwoStepCardFlow.Complete(_pickerID, _searchCard, TwoStepOutcome.ActionAccepted);
+    }
 
-        cc.StopAllCoroutines();
-        cc.pickrID = _pickerID;
-
-        if (s_isPlayingField != null)
-            s_isPlayingField.SetValue(cc, false);
-
-        cc.IsPicking = true;
-
-        if (_searchCard != null)
-        {
-            var applyStats = _searchCard.GetComponentInChildren<ApplyCardStats>();
-            if (applyStats != null)
-            {
-                var doneField = AccessTools.Field(typeof(ApplyCardStats), "done");
-                doneField?.SetValue(applyStats, false);
-            }
-        }
-
-        var spawned = s_spawnedField?.GetValue(cc) as System.Collections.IList;
-        if (spawned != null)
-        {
-            foreach (var obj in spawned)
-            {
-                var go = obj as GameObject;
-                if (go == null)
-                    continue;
-
-                var stats = go.GetComponentInChildren<ApplyCardStats>();
-                if (stats == null)
-                    continue;
-
-                var doneField = AccessTools.Field(typeof(ApplyCardStats), "done");
-                doneField?.SetValue(stats, false);
-            }
-        }
-
-        SearchCardLog.Line("Search modal closed — resuming current draft hand.");
+    private static void OnKeybindCancelledFromSearch()
+    {
+        SearchCardLog.Section("Keybind cancelled from search — restoring draft");
+        SearchCardLog.Line("No cards consumed — returning to draft hand.");
+        _pendingKeyboundCard = null;
+        TwoStepCardFlow.Complete(_pickerID, _searchCard, TwoStepOutcome.Cancelled);
     }
 
     private static void ConsumeSearchCard()
@@ -225,33 +155,5 @@ public static class SearchCardPatches
         }
 
         SearchCardLog.Warn($"Selected card '{selectedCard.cardName}' not found in runtime deck.");
-    }
-
-    private static void BroadcastRemainingCount()
-    {
-        int remaining = DeckManager.GetRemainingCount(_pickerID);
-        if (remaining >= 0)
-            DeckNetworkSync.BroadcastRemainingCount(_pickerID, remaining);
-    }
-
-    private static bool IsLocalPicker(int pickerID)
-    {
-        Player picker = PlayerManager.instance?.players?.Find(p => p.playerID == pickerID);
-        if (picker == null)
-            return false;
-
-        var viewField = AccessTools.Field(typeof(CharacterData), "view");
-        if (viewField == null)
-            return true;
-
-        object view = viewField.GetValue(picker.data);
-        if (view == null)
-            return true;
-
-        var isMine = AccessTools.Property(view.GetType(), "IsMine");
-        if (isMine == null)
-            return true;
-
-        return (bool)isMine.GetValue(view, null);
     }
 }

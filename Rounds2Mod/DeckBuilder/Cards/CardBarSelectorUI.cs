@@ -267,7 +267,7 @@ namespace DeckBuilder.Cards
 
         private void OnCancelClicked()
         {
-            LogLine("[Cancel] button clicked.");
+            LogLine("[Cancel] button clicked in card-bar selector.");
             var cb = _onCancel;
             Hide();
             cb?.Invoke();

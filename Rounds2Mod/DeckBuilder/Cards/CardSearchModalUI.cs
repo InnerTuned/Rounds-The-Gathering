@@ -522,6 +522,7 @@ public class CardSearchModalUI : MonoBehaviour
 
     private void OnCancelClicked()
     {
+        SearchCardLog.Line("[Cancel] button clicked in search modal.");
         var cb = _onCancel;
         Hide();
         cb?.Invoke();

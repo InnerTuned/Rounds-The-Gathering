@@ -1,4 +1,5 @@
 using InfoOverhaul.Delta;
+using ShieldsMod.Integration;
 using ShieldsMod.Resistance;
 using UnboundLib.Cards;
 
@@ -19,6 +20,7 @@ internal static class UpgradeResistanceCardRegistrar
     private static void OnUpgradeBuilt(CardInfo ci)
     {
         ResistanceCardCatalog.UpgradeResistanceCard = ci;
+        DeckBuilderCyclicalBridge.Register(ci.cardName);
         SLog.Line($"Registered Upgrade Resistance card: cardName='{ci.cardName}', gameObject.name='{ci.gameObject.name}'");
 
         CardDeltaRegistry.Register(ci.cardName, (_, _) => new[]

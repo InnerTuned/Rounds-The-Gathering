@@ -45,5 +45,8 @@ public class Plugin : BaseUnityPlugin
     private void Start()
     {
         KeyboundCardRegistrar.RegisterAll();
+
+        // Register the keybound-card two-step flow with DeckBuilder's TwoStepCardFlow.
+        Keybound.Patches.KeyboundPickPatches.RegisterFlow();
     }
 }

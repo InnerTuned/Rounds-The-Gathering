@@ -71,10 +71,36 @@ public class EffectStackManager : MonoBehaviour
     internal void ClearAll()
     {
         _bindings.Clear();
+        _pickPhaseActive = false;
         EffectStackOverlay.instance?.HideAll();
     }
 
+    internal bool AreTimersPaused => _pickPhaseActive;
+
     private bool _wasGameActive;
+    private bool _pickPhaseActive;
+
+    internal void OnPickPhaseBegin()
+    {
+        _pickPhaseActive = true;
+        EffectStackOverlay.instance?.HideAll();
+    }
+
+    internal void OnPickPhaseEnd()
+    {
+        _pickPhaseActive = false;
+        ResetAllBindingsForNewRound();
+        EffectStackOverlay.instance?.RefreshAll();
+    }
+
+    internal void ResetAllBindingsForNewRound()
+    {
+        foreach (var list in _bindings.Values)
+        {
+            foreach (var binding in list)
+                binding.ResetForNewRound();
+        }
+    }
 
     private void Update()
     {
@@ -86,7 +112,7 @@ public class EffectStackManager : MonoBehaviour
         }
         _wasGameActive = active;
 
-        if (!active) return;
+        if (!active || _pickPhaseActive) return;
 
         Player local = GetLocalHumanPlayer();
         if (local == null) return;
